@@ -1,0 +1,12 @@
+services:
+  - type: web
+    runtime: node
+    name: life-letters-validator
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production

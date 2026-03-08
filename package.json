@@ -1,0 +1,17 @@
+{
+  "name": "life-letters-validator",
+  "version": "1.0.0",
+  "description": "AI-powered phonetic word validator for Life Letters custom packs",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0",
+    "multer": "^2.1.0",
+    "openai": "^4.70.0"
+  }
+}

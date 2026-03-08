@@ -1,0 +1,693 @@
+/* ============================================
+   Life Letters Validator — Styles
+   Warm, playful, child-education themed
+   ============================================ */
+
+:root {
+  --gold: #d4a843;
+  --gold-light: #f5e6b8;
+  --gold-bg: #fdf8ec;
+  --cream: #fefcf5;
+  --warm-white: #fffdf7;
+  --red: #d94f4f;
+  --red-light: #fdeaea;
+  --green: #3faa5e;
+  --green-light: #e8f8ed;
+  --blue: #4a90c4;
+  --blue-light: #e6f0fa;
+  --text: #3d3224;
+  --text-light: #7a6e5e;
+  --border: #e8dcc8;
+  --shadow: 0 2px 12px rgba(60, 50, 30, 0.08);
+  --shadow-hover: 0 4px 20px rgba(60, 50, 30, 0.12);
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Nunito", "Segoe UI", sans-serif;
+  background: var(--gold-bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.page-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+/* ---- Header ---- */
+.header {
+  text-align: center;
+  padding: 32px 0 16px;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.logo-text {
+  font-family: "Quicksand", sans-serif;
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.logo-abc {
+  font-family: "Quicksand", sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--gold);
+  background: var(--gold-light);
+  padding: 2px 10px;
+  border-radius: 8px;
+  transform: rotate(3deg);
+  display: inline-block;
+}
+
+.tagline {
+  font-family: "Quicksand", sans-serif;
+  color: var(--text-light);
+  font-size: 1rem;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* ---- Cards ---- */
+.intro-card,
+.case-card,
+.letters-section {
+  background: var(--warm-white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px 32px;
+  margin-bottom: 20px;
+  border-top: 4px solid var(--gold);
+}
+
+.intro-card h1 {
+  font-family: "Quicksand", sans-serif;
+  font-size: 1.7rem;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.intro-card p {
+  font-size: 1rem;
+  color: var(--text-light);
+  margin-bottom: 16px;
+}
+
+.tips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  padding: 8px 14px;
+  background: var(--gold-bg);
+  border-radius: var(--radius-sm);
+}
+
+.tip-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* ---- Case Preference ---- */
+.case-card h2,
+.letters-section h2 {
+  font-family: "Quicksand", sans-serif;
+  font-size: 1.3rem;
+  margin-bottom: 8px;
+}
+
+.case-card p {
+  color: var(--text-light);
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+}
+
+.case-options {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.case-option {
+  cursor: pointer;
+  flex: 1;
+  min-width: 140px;
+}
+
+.case-option input {
+  display: none;
+}
+
+.case-preview {
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  text-align: center;
+  transition: all 0.2s ease;
+  background: var(--cream);
+}
+
+.case-option input:checked + .case-preview {
+  border-color: var(--gold);
+  background: var(--gold-light);
+  box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.2);
+}
+
+.case-letter {
+  display: block;
+  font-family: "Quicksand", sans-serif;
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.case-label {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+/* ---- Letters Grid ---- */
+.section-subtitle {
+  color: var(--text-light);
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+}
+
+.letters-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .letters-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+}
+
+/* ---- Letter Card ---- */
+.letter-card {
+  display: flex;
+  align-items: stretch;
+  background: var(--cream);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.letter-card:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+.letter-card.valid {
+  border-color: var(--green);
+  background: var(--green-light);
+}
+
+.letter-card.invalid {
+  border-color: var(--red);
+  background: var(--red-light);
+}
+
+.letter-card.validating {
+  border-color: var(--blue);
+  background: var(--blue-light);
+}
+
+.letter-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  min-height: 56px;
+  font-family: "Quicksand", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+  background: var(--gold-light);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.letter-card.valid .letter-badge {
+  background: var(--green);
+  color: white;
+}
+
+.letter-card.invalid .letter-badge {
+  background: var(--red);
+  color: white;
+}
+
+.letter-card.validating .letter-badge {
+  background: var(--blue);
+  color: white;
+}
+
+.letter-body {
+  flex: 1;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.letter-hint {
+  font-size: 0.78rem;
+  color: var(--text-light);
+  font-style: italic;
+}
+
+.letter-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: "Nunito", sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  width: 100%;
+  padding: 4px 0;
+}
+
+.letter-input::placeholder {
+  color: #c4b89a;
+  font-weight: 400;
+}
+
+.letter-input:focus {
+  border-bottom: 2px solid var(--gold);
+}
+
+.letter-feedback {
+  font-size: 0.82rem;
+  min-height: 1.2em;
+  line-height: 1.3;
+}
+
+.letter-feedback.success {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.letter-feedback.error {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.letter-feedback.loading {
+  color: var(--blue);
+  font-style: italic;
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--blue);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Actions ---- */
+.actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.btn {
+  font-family: "Nunito", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--gold);
+  color: white;
+  box-shadow: 0 3px 12px rgba(212, 168, 67, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #c09830;
+  box-shadow: 0 5px 16px rgba(212, 168, 67, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: white;
+  color: var(--text);
+  border: 2px solid var(--gold);
+  box-shadow: var(--shadow);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--gold-light);
+  transform: translateY(-1px);
+}
+
+.btn-icon {
+  font-size: 1.15rem;
+}
+
+/* ---- Modal ---- */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-overlay.show {
+  display: flex;
+}
+
+.modal {
+  background: var(--warm-white);
+  border-radius: var(--radius);
+  padding: 32px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+.modal h2 {
+  font-family: "Quicksand", sans-serif;
+  margin-bottom: 8px;
+}
+
+.modal p {
+  color: var(--text-light);
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+}
+
+.modal textarea {
+  width: 100%;
+  font-family: "Courier New", monospace;
+  font-size: 0.85rem;
+  padding: 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--cream);
+  color: var(--text);
+  resize: vertical;
+  margin-bottom: 16px;
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: var(--text-light);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: var(--red);
+}
+
+/* ---- Footer ---- */
+.footer {
+  text-align: center;
+  padding: 24px 0;
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 480px) {
+  .page-wrapper {
+    padding: 16px 12px 32px;
+  }
+
+  .intro-card,
+  .case-card,
+  .letters-section {
+    padding: 20px 18px;
+  }
+
+  .intro-card h1 {
+    font-size: 1.35rem;
+  }
+
+  .logo-text {
+    font-size: 1.8rem;
+  }
+
+  .case-options {
+    flex-direction: column;
+  }
+
+  .letter-badge {
+    width: 48px;
+    font-size: 1.3rem;
+  }
+}
+
+/* ---- Validate All progress ---- */
+.progress-bar-container {
+  width: 100%;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  margin-top: 12px;
+  overflow: hidden;
+  display: none;
+}
+
+.progress-bar-container.show {
+  display: block;
+}
+
+.progress-bar {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+/* Pulse animation for validating cards */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.letter-card.validating .letter-badge {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+/* ============================================
+   Photo Upload
+   ============================================ */
+
+.letter-photo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  flex-shrink: 0;
+  width: 90px;
+}
+
+.photo-file-input {
+  display: none;
+}
+
+.photo-dropzone {
+  width: 74px;
+  height: 74px;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+  position: relative;
+}
+
+.photo-dropzone:hover {
+  border-color: var(--gold);
+  background: var(--gold-bg);
+}
+
+.photo-dropzone.drag-over {
+  border-color: var(--gold);
+  background: var(--gold-light);
+  border-style: solid;
+  transform: scale(1.05);
+}
+
+/* Valid/invalid card photo area */
+.letter-card.valid .photo-dropzone {
+  border-color: var(--green);
+}
+
+.letter-card.invalid .photo-dropzone {
+  border-color: var(--red);
+}
+
+.photo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.photo-icon {
+  font-size: 1.5rem;
+  opacity: 0.5;
+}
+
+.photo-label {
+  font-size: 0.65rem;
+  color: var(--text-light);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.photo-preview-wrap {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.photo-remove {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--red);
+  color: white;
+  border: 2px solid white;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+  z-index: 2;
+}
+
+.photo-remove:hover {
+  transform: scale(1.15);
+}
+
+.photo-status {
+  font-size: 0.65rem;
+  text-align: center;
+  margin-top: 3px;
+  min-height: 1em;
+  line-height: 1.2;
+}
+
+.photo-status.uploading {
+  color: var(--blue);
+}
+
+.photo-status.success {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.photo-status.error {
+  color: var(--red);
+  font-weight: 600;
+}
+
+/* ---- Responsive adjustments for photo ---- */
+@media (max-width: 480px) {
+  .letter-photo {
+    width: 72px;
+    padding: 6px;
+  }
+
+  .photo-dropzone {
+    width: 60px;
+    height: 60px;
+  }
+
+  .photo-icon {
+    font-size: 1.2rem;
+  }
+}

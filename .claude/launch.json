@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "life-letters",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server.js"],
+      "port": 3456,
+      "cwd": "C:\\Users\\JDBusfield\\Documents\\Side Projects\\life-letters-validator"
+    }
+  ]
+}
