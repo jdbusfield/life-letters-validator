@@ -1,10 +1,8 @@
 services:
   - type: web
-    runtime: node
+    runtime: docker
     name: life-letters-validator
     plan: free
-    buildCommand: npm install
-    startCommand: node server.js
     envVars:
       - key: DEEPSEEK_API_KEY
         sync: false
@@ -18,3 +16,5 @@ services:
         sync: false
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 3456

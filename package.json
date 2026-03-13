@@ -9,7 +9,6 @@
     "dev": "node --watch server.js"
   },
   "dependencies": {
-    "@sparticuz/chromium": "^143.0.4",
     "@supabase/supabase-js": "^2.99.1",
     "dotenv": "^16.4.0",
     "express": "^4.21.0",

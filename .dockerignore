@@ -1,0 +1,5 @@
+node_modules
+test-output*.pdf
+test-pdf.js
+.env
+.git
