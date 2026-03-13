@@ -124,6 +124,7 @@ function renderOrders(orders) {
       <td>${formatDate(o.created_at)}</td>
       <td>
         <button class="btn btn-small" onclick="viewOrder('${o.id}')">View</button>
+        ${o.pdf_url ? `<button class="btn btn-small btn-pdf" onclick="downloadPDF('${o.id}')">PDF</button>` : ""}
         <button class="btn btn-small" onclick="exportOrder('${o.id}')">Export</button>
       </td>
     </tr>
@@ -183,12 +184,28 @@ function renderOrderDetail(order, entries) {
       <div><strong>Status:</strong> <span class="status-badge status-${order.status}">${formatStatus(order.status)}</span></div>
       <div><strong>Created:</strong> ${formatDate(order.created_at)}</div>
     </div>
+    <div class="detail-actions">
+      ${
+        nextStatus
+          ? `<button class="btn btn-primary btn-small" onclick="updateStatus('${order.id}', '${nextStatus}')">
+              Mark as ${formatStatus(nextStatus)}
+            </button>`
+          : '<span class="completed-label">Order complete</span>'
+      }
+      ${
+        order.pdf_url
+          ? `<button class="btn btn-small btn-pdf" onclick="downloadPDF('${order.id}')">⬇ Download PDF</button>`
+          : '<span class="no-pdf-label">PDF not generated</span>'
+      }
+      <button class="btn btn-small" onclick="regeneratePDF('${order.id}')">🔄 Regenerate PDF</button>
+    </div>
     ${
-      nextStatus
-        ? `<button class="btn btn-primary btn-small" onclick="updateStatus('${order.id}', '${nextStatus}')">
-            Mark as ${formatStatus(nextStatus)}
-          </button>`
-        : '<span class="completed-label">Order complete</span>'
+      order.pdf_url
+        ? `<h3>Card Preview</h3>
+           <div class="pdf-preview-wrap">
+             <iframe class="pdf-preview" src="${esc(order.pdf_url)}#toolbar=0" title="PDF Preview"></iframe>
+           </div>`
+        : ""
     }
     <h3>Letter Entries</h3>
     <div class="entries-grid">
@@ -237,6 +254,34 @@ async function updateStatus(orderId, newStatus) {
 
 async function exportOrder(orderId) {
   window.open(`/api/admin/export/${orderId}`, "_blank");
+}
+
+async function downloadPDF(orderId) {
+  window.open(`/api/admin/orders/${orderId}/pdf`, "_blank");
+}
+
+async function regeneratePDF(orderId) {
+  if (!confirm("Regenerate the PDF for this order? This will replace the existing PDF.")) return;
+
+  try {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = "⏳ Generating...";
+
+    const res = await fetch(`/api/admin/orders/${orderId}/regenerate-pdf`, { method: "POST" });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to regenerate PDF");
+    }
+
+    // Refresh the detail view and orders list
+    await viewOrder(orderId);
+    loadOrders();
+    alert("PDF regenerated successfully!");
+  } catch (err) {
+    console.error("Regenerate PDF error:", err);
+    alert("Failed to regenerate PDF: " + err.message);
+  }
 }
 
 function closeModal() {

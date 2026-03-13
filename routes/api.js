@@ -9,6 +9,7 @@ import {
   LETTER_HINTS,
 } from "../lib/letterData.js";
 import { validateSingle, validateBatch } from "../lib/validation.js";
+import { generateOrderPDF } from "../lib/pdfGenerator.js";
 
 const router = Router();
 
@@ -144,6 +145,11 @@ router.post("/api/submit-order", async (req, res) => {
       await supabase.from("orders").delete().eq("id", order.id);
       return res.status(500).json({ error: "Failed to save letter entries" });
     }
+
+    // Fire off PDF generation asynchronously (don't block the response)
+    generateOrderPDF(order, letterEntries).catch((err) =>
+      console.error("Background PDF generation failed:", err)
+    );
 
     res.json({
       success: true,

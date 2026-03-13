@@ -2,6 +2,7 @@ import { Router } from "express";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import supabase from "../lib/supabase.js";
+import { regenerateOrderPDF } from "../lib/pdfGenerator.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -183,6 +184,52 @@ router.get("/api/admin/export/:orderId", requireAdmin, async (req, res) => {
     res.status(500).json({ error: "Failed to export order" });
   }
 });
+
+// GET /api/admin/orders/:orderId/pdf — download generated PDF
+router.get("/api/admin/orders/:orderId/pdf", requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(503).json({ error: "Database not configured" });
+    }
+
+    const { data: order } = await supabase
+      .from("orders")
+      .select("pdf_url, order_number")
+      .eq("id", req.params.orderId)
+      .single();
+
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    if (!order.pdf_url) {
+      return res.status(404).json({ error: "PDF not yet generated" });
+    }
+
+    res.redirect(order.pdf_url);
+  } catch (error) {
+    console.error("PDF download error:", error);
+    res.status(500).json({ error: "Failed to get PDF" });
+  }
+});
+
+// POST /api/admin/orders/:orderId/regenerate-pdf — regenerate the PDF
+router.post(
+  "/api/admin/orders/:orderId/regenerate-pdf",
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const pdfUrl = await regenerateOrderPDF(req.params.orderId);
+      if (!pdfUrl) {
+        return res.status(500).json({ error: "PDF generation failed" });
+      }
+      res.json({ success: true, pdfUrl });
+    } catch (error) {
+      console.error("PDF regenerate error:", error);
+      res.status(500).json({ error: error.message || "Failed to regenerate PDF" });
+    }
+  }
+);
 
 // GET /admin — serve admin page
 router.get("/admin", (_req, res) => {
