@@ -1,6 +1,7 @@
 /* ============================================
-   Life Letters Validator — Styles
+   Life Letters — Styles
    Warm, playful, child-education themed
+   Font: Comic Neue (single-story 'a' for literacy)
    ============================================ */
 
 :root {
@@ -31,7 +32,7 @@
 }
 
 body {
-  font-family: "Nunito", "Segoe UI", sans-serif;
+  font-family: "Comic Neue", cursive, sans-serif;
   background: var(--gold-bg);
   color: var(--text);
   line-height: 1.6;
@@ -50,41 +51,22 @@ body {
   padding: 32px 0 16px;
 }
 
-.logo {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 12px;
-}
-
-.logo-text {
-  font-family: "Quicksand", sans-serif;
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.logo-abc {
-  font-family: "Quicksand", sans-serif;
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--gold);
-  background: var(--gold-light);
-  padding: 2px 10px;
-  border-radius: 8px;
-  transform: rotate(3deg);
-  display: inline-block;
+.logo-svg {
+  width: 260px;
+  height: 60px;
 }
 
 .tagline {
-  font-family: "Quicksand", sans-serif;
   color: var(--text-light);
   font-size: 1rem;
-  margin-top: 4px;
+  margin-top: 8px;
   font-style: italic;
 }
 
-/* ---- Cards ---- */
+/* ---- Section Cards ---- */
 .intro-card,
+.helper-card,
+.order-card,
 .case-card,
 .letters-section {
   background: var(--warm-white);
@@ -96,43 +78,219 @@ body {
 }
 
 .intro-card h1 {
-  font-family: "Quicksand", sans-serif;
   font-size: 1.7rem;
   margin-bottom: 12px;
   color: var(--text);
 }
 
-.intro-card p {
+.intro-text p {
   font-size: 1rem;
   color: var(--text-light);
   margin-bottom: 16px;
 }
 
-.tips {
+.intro-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.intro-example {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--gold-bg);
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+}
+
+.intro-example-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--gold);
+  color: white;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.intro-warnings {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.tip {
+.intro-warning,
+.intro-tip {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   padding: 8px 14px;
-  background: var(--gold-bg);
   border-radius: var(--radius-sm);
 }
 
+.intro-warning {
+  background: var(--red-light);
+  color: var(--red);
+}
+
+.intro-tip {
+  background: var(--blue-light);
+  color: var(--blue);
+}
+
+.warning-icon,
 .tip-icon {
   font-size: 1.1rem;
   flex-shrink: 0;
 }
 
+/* ---- Brainstorming Helper Sheet ---- */
+.helper-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.helper-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 32px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text);
+}
+
+.helper-toggle h2 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.toggle-arrow {
+  font-size: 0.9rem;
+  transition: transform 0.3s ease;
+  color: var(--text-light);
+}
+
+.toggle-arrow.open {
+  transform: rotate(180deg);
+}
+
+.helper-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+  padding: 0 32px;
+}
+
+.helper-content.open {
+  max-height: 1200px;
+  padding: 0 32px 24px;
+}
+
+.helper-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: 12px;
+}
+
+.helper-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+@media (min-width: 640px) {
+  .helper-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.helper-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.helper-row:nth-child(odd) {
+  background: var(--gold-bg);
+}
+
+.helper-letter {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--gold);
+  min-width: 20px;
+}
+
+.helper-words {
+  color: var(--text-light);
+}
+
+/* ---- Order Info ---- */
+.order-card h2 {
+  font-size: 1.3rem;
+  margin-bottom: 12px;
+}
+
+.order-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+@media (min-width: 640px) {
+  .order-fields {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.order-field label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+
+.order-field input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--cream);
+  transition: border-color 0.2s;
+}
+
+.order-field input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.order-field input[readonly] {
+  background: var(--gold-bg);
+  color: var(--text-light);
+}
+
 /* ---- Case Preference ---- */
 .case-card h2,
 .letters-section h2 {
-  font-family: "Quicksand", sans-serif;
   font-size: 1.3rem;
   margin-bottom: 8px;
 }
@@ -176,8 +334,7 @@ body {
 
 .case-letter {
   display: block;
-  font-family: "Quicksand", sans-serif;
-  font-size: 2.4rem;
+  font-size: 2rem;
   font-weight: 700;
   color: var(--text);
   margin-bottom: 6px;
@@ -186,7 +343,7 @@ body {
 .case-label {
   font-size: 0.85rem;
   color: var(--text-light);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ---- Letters Grid ---- */
@@ -239,15 +396,19 @@ body {
   background: var(--blue-light);
 }
 
+.letter-card.is-default {
+  border-color: var(--gold);
+  background: var(--gold-bg);
+}
+
 .letter-badge {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  min-height: 56px;
-  font-family: "Quicksand", sans-serif;
+  width: 52px;
+  min-height: 52px;
   font-size: 1.5rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text);
   background: var(--gold-light);
   flex-shrink: 0;
@@ -269,16 +430,22 @@ body {
   color: white;
 }
 
+.letter-card.is-default .letter-badge {
+  background: var(--gold);
+  color: white;
+}
+
 .letter-body {
   flex: 1;
-  padding: 10px 14px;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
+  min-width: 0;
 }
 
 .letter-hint {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: var(--text-light);
   font-style: italic;
 }
@@ -287,12 +454,12 @@ body {
   border: none;
   outline: none;
   background: transparent;
-  font-family: "Nunito", sans-serif;
+  font-family: "Comic Neue", cursive, sans-serif;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
   width: 100%;
-  padding: 4px 0;
+  padding: 3px 0;
 }
 
 .letter-input::placeholder {
@@ -304,20 +471,25 @@ body {
   border-bottom: 2px solid var(--gold);
 }
 
+.letter-input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .letter-feedback {
-  font-size: 0.82rem;
-  min-height: 1.2em;
+  font-size: 0.78rem;
+  min-height: 1.1em;
   line-height: 1.3;
 }
 
 .letter-feedback.success {
   color: var(--green);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .letter-feedback.error {
   color: var(--red);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .letter-feedback.loading {
@@ -325,7 +497,230 @@ body {
   font-style: italic;
 }
 
-/* Spinner */
+/* ---- Suggestion Chips ---- */
+.suggestion-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.suggestion-chip {
+  font-family: inherit;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--warm-white);
+  color: var(--text-light);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.suggestion-chip:hover {
+  background: var(--gold-light);
+  border-color: var(--gold);
+  color: var(--text);
+}
+
+/* ---- R-Warning ---- */
+.r-warning {
+  font-size: 0.7rem;
+  color: #b8860b;
+  margin-top: 2px;
+}
+
+/* ---- Letter Actions (photo + default) ---- */
+.letter-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  flex-shrink: 0;
+}
+
+/* ---- Photo Upload ---- */
+.letter-photo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-file-input {
+  display: none;
+}
+
+.photo-dropzone {
+  width: 68px;
+  height: 68px;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+  position: relative;
+}
+
+.photo-dropzone:hover {
+  border-color: var(--gold);
+  background: var(--gold-bg);
+}
+
+.photo-dropzone.drag-over {
+  border-color: var(--gold);
+  background: var(--gold-light);
+  border-style: solid;
+  transform: scale(1.05);
+}
+
+.letter-card.valid .photo-dropzone {
+  border-color: var(--green);
+}
+
+.letter-card.invalid .photo-dropzone {
+  border-color: var(--red);
+}
+
+.photo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  pointer-events: none;
+}
+
+.photo-icon {
+  font-size: 1.3rem;
+  opacity: 0.5;
+}
+
+.photo-label {
+  font-size: 0.6rem;
+  color: var(--text-light);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.photo-preview-wrap {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.photo-remove {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--red);
+  color: white;
+  border: 2px solid white;
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+  z-index: 2;
+}
+
+.photo-remove:hover {
+  transform: scale(1.15);
+}
+
+.photo-status {
+  font-size: 0.6rem;
+  text-align: center;
+  margin-top: 2px;
+  min-height: 1em;
+  line-height: 1.2;
+}
+
+.photo-status.uploading {
+  color: var(--blue);
+}
+
+.photo-status.success {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.photo-status.error {
+  color: var(--red);
+  font-weight: 700;
+}
+
+/* ---- Default Button ---- */
+.default-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--cream);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  width: 68px;
+}
+
+.default-btn:hover {
+  border-color: var(--gold);
+  background: var(--gold-bg);
+}
+
+.default-btn.active {
+  border-color: var(--gold);
+  background: var(--gold-light);
+  box-shadow: 0 0 0 2px rgba(212, 168, 67, 0.3);
+}
+
+.default-preview-img {
+  width: 56px;
+  height: 56px;
+}
+
+.default-preview-img svg {
+  width: 100%;
+  height: 100%;
+}
+
+.default-btn-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--text-light);
+  white-space: nowrap;
+}
+
+.default-btn.active .default-btn-label {
+  color: var(--gold);
+}
+
+/* ---- Spinner ---- */
 .spinner {
   display: inline-block;
   width: 14px;
@@ -339,7 +734,9 @@ body {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ---- Actions ---- */
@@ -352,7 +749,7 @@ body {
 }
 
 .btn {
-  font-family: "Nunito", sans-serif;
+  font-family: "Comic Neue", cursive, sans-serif;
   font-size: 1rem;
   font-weight: 700;
   padding: 14px 28px;
@@ -398,72 +795,42 @@ body {
   font-size: 1.15rem;
 }
 
-/* ---- Modal ---- */
-.modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 1000;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.modal-overlay.show {
-  display: flex;
-}
-
-.modal {
+/* ---- Confirmation ---- */
+.confirmation-section {
   background: var(--warm-white);
   border-radius: var(--radius);
-  padding: 32px;
-  max-width: 600px;
-  width: 100%;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  position: relative;
+  box-shadow: var(--shadow);
+  padding: 48px 32px;
+  margin-bottom: 20px;
+  border-top: 4px solid var(--green);
+  text-align: center;
 }
 
-.modal h2 {
-  font-family: "Quicksand", sans-serif;
+.confirmation-icon {
+  font-size: 4rem;
+  margin-bottom: 12px;
+}
+
+.confirmation-section h2 {
+  font-size: 2rem;
+  color: var(--green);
   margin-bottom: 8px;
 }
 
-.modal p {
+.confirmation-section p {
+  font-size: 1rem;
   color: var(--text-light);
-  margin-bottom: 16px;
-  font-size: 0.95rem;
+  margin-bottom: 12px;
 }
 
-.modal textarea {
-  width: 100%;
-  font-family: "Courier New", monospace;
-  font-size: 0.85rem;
-  padding: 14px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--cream);
+.confirmation-detail {
+  max-width: 500px;
+  margin: 0 auto 16px;
+}
+
+.confirmation-order {
+  font-size: 1.1rem;
   color: var(--text);
-  resize: vertical;
-  margin-bottom: 16px;
-}
-
-.modal-close {
-  position: absolute;
-  top: 16px;
-  right: 20px;
-  background: none;
-  border: none;
-  font-size: 1.8rem;
-  color: var(--text-light);
-  cursor: pointer;
-  line-height: 1;
-}
-
-.modal-close:hover {
-  color: var(--red);
 }
 
 /* ---- Footer ---- */
@@ -474,6 +841,21 @@ body {
   font-size: 0.85rem;
 }
 
+/* ---- Pulse animation for validating ---- */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.letter-card.validating .letter-badge {
+  animation: pulse 1s ease-in-out infinite;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 480px) {
   .page-wrapper {
@@ -481,17 +863,23 @@ body {
   }
 
   .intro-card,
+  .helper-card,
+  .order-card,
   .case-card,
   .letters-section {
     padding: 20px 18px;
   }
 
-  .intro-card h1 {
-    font-size: 1.35rem;
+  .helper-toggle {
+    padding: 16px 18px;
   }
 
-  .logo-text {
-    font-size: 1.8rem;
+  .helper-content.open {
+    padding: 0 18px 20px;
+  }
+
+  .intro-card h1 {
+    font-size: 1.35rem;
   }
 
   .case-options {
@@ -499,195 +887,29 @@ body {
   }
 
   .letter-badge {
-    width: 48px;
-    font-size: 1.3rem;
+    width: 44px;
+    font-size: 1.2rem;
   }
-}
 
-/* ---- Validate All progress ---- */
-.progress-bar-container {
-  width: 100%;
-  height: 6px;
-  background: var(--border);
-  border-radius: 3px;
-  margin-top: 12px;
-  overflow: hidden;
-  display: none;
-}
-
-.progress-bar-container.show {
-  display: block;
-}
-
-.progress-bar {
-  height: 100%;
-  background: var(--gold);
-  border-radius: 3px;
-  transition: width 0.3s ease;
-  width: 0%;
-}
-
-/* Pulse animation for validating cards */
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-
-.letter-card.validating .letter-badge {
-  animation: pulse 1s ease-in-out infinite;
-}
-
-/* ============================================
-   Photo Upload
-   ============================================ */
-
-.letter-photo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  flex-shrink: 0;
-  width: 90px;
-}
-
-.photo-file-input {
-  display: none;
-}
-
-.photo-dropzone {
-  width: 74px;
-  height: 74px;
-  border: 2px dashed var(--border);
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  background: rgba(255, 255, 255, 0.5);
-  overflow: hidden;
-  position: relative;
-}
-
-.photo-dropzone:hover {
-  border-color: var(--gold);
-  background: var(--gold-bg);
-}
-
-.photo-dropzone.drag-over {
-  border-color: var(--gold);
-  background: var(--gold-light);
-  border-style: solid;
-  transform: scale(1.05);
-}
-
-/* Valid/invalid card photo area */
-.letter-card.valid .photo-dropzone {
-  border-color: var(--green);
-}
-
-.letter-card.invalid .photo-dropzone {
-  border-color: var(--red);
-}
-
-.photo-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  pointer-events: none;
-}
-
-.photo-icon {
-  font-size: 1.5rem;
-  opacity: 0.5;
-}
-
-.photo-label {
-  font-size: 0.65rem;
-  color: var(--text-light);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.photo-preview-wrap {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.photo-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 6px;
-}
-
-.photo-remove {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--red);
-  color: white;
-  border: 2px solid white;
-  font-size: 0.75rem;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-  transition: transform 0.15s ease;
-  z-index: 2;
-}
-
-.photo-remove:hover {
-  transform: scale(1.15);
-}
-
-.photo-status {
-  font-size: 0.65rem;
-  text-align: center;
-  margin-top: 3px;
-  min-height: 1em;
-  line-height: 1.2;
-}
-
-.photo-status.uploading {
-  color: var(--blue);
-}
-
-.photo-status.success {
-  color: var(--green);
-  font-weight: 600;
-}
-
-.photo-status.error {
-  color: var(--red);
-  font-weight: 600;
-}
-
-/* ---- Responsive adjustments for photo ---- */
-@media (max-width: 480px) {
-  .letter-photo {
-    width: 72px;
-    padding: 6px;
+  .letter-body {
+    padding: 6px 8px;
   }
 
   .photo-dropzone {
-    width: 60px;
-    height: 60px;
+    width: 56px;
+    height: 56px;
   }
 
-  .photo-icon {
-    font-size: 1.2rem;
+  .default-btn {
+    width: 56px;
+  }
+
+  .default-preview-img {
+    width: 46px;
+    height: 46px;
+  }
+
+  .order-fields {
+    grid-template-columns: 1fr;
   }
 }

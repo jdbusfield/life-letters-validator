@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Life Letters — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div class="admin-wrapper">
+    <!-- Login -->
+    <div class="login-screen" id="loginScreen">
+      <div class="login-card">
+        <h1>Life Letters Admin</h1>
+        <p>Enter your admin password to continue.</p>
+        <form id="loginForm">
+          <input type="password" id="loginPassword" placeholder="Password" required autofocus>
+          <button type="submit" class="btn btn-primary">Log In</button>
+        </form>
+        <div class="login-error" id="loginError"></div>
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard" style="display:none;">
+      <header class="admin-header">
+        <h1>Life Letters Admin</h1>
+        <button class="btn btn-small" id="logoutBtn">Log Out</button>
+      </header>
+
+      <!-- Status Filters -->
+      <div class="status-tabs">
+        <button class="status-tab active" data-status="all">All</button>
+        <button class="status-tab" data-status="submitted">Submitted</button>
+        <button class="status-tab" data-status="in_progress">In Progress</button>
+        <button class="status-tab" data-status="printed">Printed</button>
+        <button class="status-tab" data-status="shipped">Shipped</button>
+      </div>
+
+      <!-- Orders Table -->
+      <div class="orders-table-wrap">
+        <table class="orders-table" id="ordersTable">
+          <thead>
+            <tr>
+              <th>Order #</th>
+              <th>Customer</th>
+              <th>Email</th>
+              <th>Style</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="ordersBody">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+        <div class="empty-state" id="emptyState" style="display:none;">
+          No orders found.
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination" id="pagination"></div>
+
+      <!-- Order Detail Modal -->
+      <div class="modal-overlay" id="detailModal">
+        <div class="modal">
+          <button class="modal-close" id="modalClose">&times;</button>
+          <div id="detailContent">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
