@@ -17,6 +17,9 @@ dotenv.config({ path: join(__dirname, ".env") });
 
 const app = express();
 
+// Trust proxy (needed for secure cookies on Render, Railway, etc.)
+app.set("trust proxy", 1);
+
 // Middleware
 app.use(express.json());
 app.use(
@@ -27,6 +30,7 @@ app.use(
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
+      sameSite: "lax",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
   })
