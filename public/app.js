@@ -642,17 +642,9 @@ async function submitOrder() {
       throw new Error(err.error || "Submission failed");
     }
 
-    const result = await res.json();
+    await res.json();
 
     // Show confirmation
-    const confirmedOrderNumber = result.orderNumber || orderNumber;
-    const confirmEl = document.getElementById("confirmOrderNumber");
-    if (confirmedOrderNumber) {
-      confirmEl.textContent = confirmedOrderNumber;
-      confirmEl.parentElement.style.display = "";
-    } else {
-      confirmEl.parentElement.style.display = "none";
-    }
     document.getElementById("confirmationSection").style.display = "block";
 
     // Hide the form sections
