@@ -266,11 +266,6 @@ body {
   margin-bottom: 4px;
 }
 
-.order-field label .optional {
-  font-weight: 400;
-  opacity: 0.7;
-}
-
 .order-field input {
   width: 100%;
   padding: 10px 14px;

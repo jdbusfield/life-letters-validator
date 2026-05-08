@@ -15,12 +15,9 @@ let dataLoaded = false;
 // ---- Init ----
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // Parse order number from URL
+  // Parse order number from URL (kept for /?order= deep links from purchase emails)
   const params = new URLSearchParams(window.location.search);
   orderNumber = params.get("order") || "";
-  if (orderNumber) {
-    document.getElementById("orderNumber").value = orderNumber;
-  }
 
   // Load letter data from server
   await loadLetterData();
