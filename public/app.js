@@ -11,6 +11,7 @@ const state = {};
 let debounceTimers = {};
 let orderNumber = "";
 let dataLoaded = false;
+let defaultAllAppliedTo = new Set();
 
 // ---- Init ----
 
@@ -29,6 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Event listeners
   document.getElementById("validateAllBtn").addEventListener("click", validateAll);
   document.getElementById("submitBtn").addEventListener("click", submitOrder);
+  document.getElementById("defaultAllCheckbox").addEventListener("change", handleDefaultAllToggle);
 
   // Helper sheet toggle
   document.getElementById("helperToggle").addEventListener("click", () => {
@@ -241,6 +243,26 @@ function toggleDefault(letter) {
 
   updateCardDefault(letter, isDefault);
   updateSubmitButton();
+}
+
+function handleDefaultAllToggle(e) {
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  if (e.target.checked) {
+    defaultAllAppliedTo = new Set();
+    for (const l of letters) {
+      const s = state[l];
+      const hasValidCustom = !s.isDefault && s.word && s.status === "valid";
+      if (!s.isDefault && !hasValidCustom) {
+        toggleDefault(l);
+        defaultAllAppliedTo.add(l);
+      }
+    }
+  } else {
+    for (const l of defaultAllAppliedTo) {
+      if (state[l].isDefault) toggleDefault(l);
+    }
+    defaultAllAppliedTo.clear();
+  }
 }
 
 function updateCardDefault(letter, isDefault) {
