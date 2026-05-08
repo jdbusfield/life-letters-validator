@@ -551,10 +551,6 @@ async function submitOrder() {
     document.querySelector('input[name="casePreference"]:checked')?.value || "mix";
 
   // Validation
-  if (!orderNumber) {
-    alert("No order number found. Please use the link from your purchase email.");
-    return;
-  }
   if (!customerEmail) {
     alert("Please enter your email address.");
     document.getElementById("customerEmail").focus();
@@ -630,7 +626,14 @@ async function submitOrder() {
     const result = await res.json();
 
     // Show confirmation
-    document.getElementById("confirmOrderNumber").textContent = orderNumber;
+    const confirmedOrderNumber = result.orderNumber || orderNumber;
+    const confirmEl = document.getElementById("confirmOrderNumber");
+    if (confirmedOrderNumber) {
+      confirmEl.textContent = confirmedOrderNumber;
+      confirmEl.parentElement.style.display = "";
+    } else {
+      confirmEl.parentElement.style.display = "none";
+    }
     document.getElementById("confirmationSection").style.display = "block";
 
     // Hide the form sections
