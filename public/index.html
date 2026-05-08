@@ -125,12 +125,18 @@
 
     <!-- Actions -->
     <section class="actions">
-      <button class="btn btn-secondary" id="validateAllBtn">
-        <span class="btn-icon">&#9889;</span> Validate All Words
-      </button>
-      <button class="btn btn-primary" id="submitBtn">
-        <span class="btn-icon">&#128230;</span> Submit Order
-      </button>
+      <label class="default-all-toggle">
+        <input type="checkbox" id="defaultAllCheckbox">
+        <span>Use default for all remaining letters</span>
+      </label>
+      <div class="actions-buttons">
+        <button class="btn btn-secondary" id="validateAllBtn">
+          <span class="btn-icon">&#9889;</span> Validate All Words
+        </button>
+        <button class="btn btn-primary" id="submitBtn">
+          <span class="btn-icon">&#128230;</span> Submit Order
+        </button>
+      </div>
     </section>
 
     <!-- Confirmation (hidden until submit) -->
