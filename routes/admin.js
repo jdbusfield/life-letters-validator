@@ -2,7 +2,7 @@ import { Router } from "express";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import supabase from "../lib/supabase.js";
-import { regenerateOrderPDF, generatePhotosPDF } from "../lib/pdfGenerator.js";
+import { regenerateOrderPDF } from "../lib/pdfGenerator.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -150,40 +150,38 @@ router.patch(
   }
 );
 
-// GET /api/admin/export/:orderId — export order as a PDF of uploaded photos
+// GET /api/admin/export/:orderId — regenerate the print-ready card deck and download
 router.get("/api/admin/export/:orderId", requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(503).json({ error: "Database not configured" });
     }
 
+    const pdfUrl = await regenerateOrderPDF(req.params.orderId);
+    if (!pdfUrl) {
+      return res.status(500).json({ error: "PDF generation failed" });
+    }
+
     const { data: order } = await supabase
       .from("orders")
-      .select("*")
+      .select("order_number")
       .eq("id", req.params.orderId)
       .single();
 
-    const { data: entries } = await supabase
-      .from("letter_entries")
-      .select("*")
-      .eq("order_id", req.params.orderId)
-      .order("letter");
-
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+    const pdfResponse = await fetch(pdfUrl);
+    if (!pdfResponse.ok) {
+      return res.status(502).json({ error: "Failed to fetch PDF from storage" });
     }
 
-    const pdfBuffer = await generatePhotosPDF(order, entries || []);
-
+    const filename = `life-letters-order-${order?.order_number || req.params.orderId}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="order-${order.order_number}-photos.pdf"`
-    );
-    res.send(pdfBuffer);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    const arrayBuffer = await pdfResponse.arrayBuffer();
+    res.send(Buffer.from(arrayBuffer));
   } catch (error) {
     console.error("Export error:", error);
-    res.status(500).json({ error: "Failed to export order" });
+    res.status(500).json({ error: error.message || "Failed to export order" });
   }
 });
 
