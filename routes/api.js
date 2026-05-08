@@ -89,11 +89,15 @@ router.post("/api/submit-order", async (req, res) => {
     const { orderNumber, customerEmail, customerName, letterStyle, entries } =
       req.body;
 
-    if (!orderNumber || !customerEmail || !letterStyle) {
+    if (!customerEmail || !letterStyle) {
       return res
         .status(400)
-        .json({ error: "Order number, email, and letter style are required" });
+        .json({ error: "Email and letter style are required" });
     }
+
+    const finalOrderNumber =
+      (orderNumber && orderNumber.trim()) ||
+      `LL-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
 
     if (!entries || !Array.isArray(entries) || entries.length !== 26) {
       return res
@@ -105,7 +109,7 @@ router.post("/api/submit-order", async (req, res) => {
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
-        order_number: orderNumber,
+        order_number: finalOrderNumber,
         customer_email: customerEmail,
         customer_name: customerName || null,
         letter_style: letterStyle,
