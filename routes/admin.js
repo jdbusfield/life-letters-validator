@@ -2,7 +2,7 @@ import { Router } from "express";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import supabase from "../lib/supabase.js";
-import { regenerateOrderPDF } from "../lib/pdfGenerator.js";
+import { regenerateOrderPDF, generatePhotosPDF } from "../lib/pdfGenerator.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -150,7 +150,7 @@ router.patch(
   }
 );
 
-// GET /api/admin/export/:orderId — export order data as JSON
+// GET /api/admin/export/:orderId — export order as a PDF of uploaded photos
 router.get("/api/admin/export/:orderId", requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
@@ -173,12 +173,14 @@ router.get("/api/admin/export/:orderId", requireAdmin, async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    res.setHeader("Content-Type", "application/json");
+    const pdfBuffer = await generatePhotosPDF(order, entries || []);
+
+    res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="order-${order.order_number}.json"`
+      `attachment; filename="order-${order.order_number}-photos.pdf"`
     );
-    res.json({ order, entries });
+    res.send(pdfBuffer);
   } catch (error) {
     console.error("Export error:", error);
     res.status(500).json({ error: "Failed to export order" });
@@ -206,7 +208,18 @@ router.get("/api/admin/orders/:orderId/pdf", requireAdmin, async (req, res) => {
       return res.status(404).json({ error: "PDF not yet generated" });
     }
 
-    res.redirect(order.pdf_url);
+    // Fetch the PDF from Supabase and stream it with download headers
+    const pdfResponse = await fetch(order.pdf_url);
+    if (!pdfResponse.ok) {
+      return res.status(502).json({ error: "Failed to fetch PDF from storage" });
+    }
+
+    const filename = `life-letters-order-${order.order_number}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    const arrayBuffer = await pdfResponse.arrayBuffer();
+    res.send(Buffer.from(arrayBuffer));
   } catch (error) {
     console.error("PDF download error:", error);
     res.status(500).json({ error: "Failed to get PDF" });
