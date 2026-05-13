@@ -620,7 +620,8 @@ body {
 .photo-preview {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: var(--cream);
   border-radius: 6px;
 }
 

@@ -415,7 +415,8 @@ body {
 .entry-photo {
   width: 60px;
   height: 60px;
-  object-fit: cover;
+  object-fit: contain;
+  background: var(--cream);
   border-radius: 6px;
 }
 
