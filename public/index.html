@@ -11,6 +11,12 @@
 </head>
 <body>
   <div class="page-wrapper">
+    <!-- Restore-progress banner (shown when saved progress is found) -->
+    <div class="restore-banner" id="restoreBanner" style="display:none;">
+      <span class="restore-text" id="restoreText">We found your saved progress.</span>
+      <button class="restore-startover" id="restoreStartOver">Start over</button>
+    </div>
+
     <!-- Header -->
     <header class="header">
       <div class="logo">
@@ -133,10 +139,17 @@
         <button class="btn btn-secondary" id="validateAllBtn">
           <span class="btn-icon">&#9889;</span> Validate All Words
         </button>
+        <button class="btn btn-secondary" id="saveBtn">
+          <span class="btn-icon">&#128190;</span> Save &amp; Finish Later
+        </button>
+        <button class="btn btn-secondary" id="previewBtn">
+          <span class="btn-icon">&#128065;&#65039;</span> Preview Cards
+        </button>
         <button class="btn btn-primary" id="submitBtn">
           <span class="btn-icon">&#128230;</span> Submit Order
         </button>
       </div>
+      <p class="submit-hint" id="submitHint"></p>
     </section>
 
     <!-- Confirmation (hidden until submit) -->
@@ -151,6 +164,27 @@
       <p><strong>Life Letters</strong> &mdash; where every sound becomes part of your little one's learning story</p>
     </footer>
   </div>
+
+  <!-- Preview modal (hidden until "Preview Cards") -->
+  <div class="preview-overlay" id="previewOverlay" style="display:none;">
+    <div class="preview-modal" role="dialog" aria-modal="true" aria-label="Card preview">
+      <div class="preview-header">
+        <h2>Preview your cards</h2>
+        <button class="preview-close" id="previewClose" title="Close">&times;</button>
+      </div>
+      <p class="preview-note" id="previewNote">This is a rough preview of the front of each card. Final printed cards are 4.25&Prime; &times; 5.5&Prime;.</p>
+      <div class="preview-grid" id="previewGrid"></div>
+      <div class="preview-actions">
+        <button class="btn btn-secondary" id="previewKeepEditing">Keep editing</button>
+        <button class="btn btn-primary" id="previewSubmit">
+          <span class="btn-icon">&#128230;</span> Submit Order
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" style="display:none;"></div>
 
   <script src="app.js"></script>
 </body>

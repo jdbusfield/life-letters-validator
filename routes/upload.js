@@ -2,6 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import { extname } from "path";
 import supabase from "../lib/supabase.js";
+import { checkUploadedPhoto } from "../lib/imageCheck.js";
 
 const router = Router();
 
@@ -26,6 +27,13 @@ router.post("/api/upload/:letter", upload.single("photo"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    // Quality gate: reject low-resolution photos (and, when enabled via
+    // PHOTO_REQUIRE_TRANSPARENT, photos without a transparent background).
+    const check = checkUploadedPhoto(req.file.buffer);
+    if (!check.ok) {
+      return res.status(422).json({ error: check.reason });
     }
 
     const letter = req.params.letter.toUpperCase();

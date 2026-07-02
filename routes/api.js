@@ -1,5 +1,8 @@
 import { Router } from "express";
 import OpenAI from "openai";
+import { readdirSync } from "fs";
+import { join, dirname, extname, basename } from "path";
+import { fileURLToPath } from "url";
 import supabase from "../lib/supabase.js";
 import {
   LETTER_DATA,
@@ -10,6 +13,31 @@ import {
 } from "../lib/letterData.js";
 import { validateSingle, validateBatch } from "../lib/validation.js";
 import { generateOrderPDF } from "../lib/pdfGenerator.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const DEFAULTS_DIR = join(__dirname, "..", "public", "defaults");
+
+// Scan public/defaults/ and return a { A: "/defaults/A.png", ... } map of the
+// letters that currently have a stock default image. Re-scanned per request so
+// newly dropped-in images appear without a restart.
+function getDefaultImageMap() {
+  const map = {};
+  const allowed = new Set([".png", ".jpg", ".jpeg", ".webp"]);
+  try {
+    for (const file of readdirSync(DEFAULTS_DIR)) {
+      const ext = extname(file).toLowerCase();
+      if (!allowed.has(ext)) continue;
+      const letter = basename(file, ext).toUpperCase();
+      if (/^[A-Z]$/.test(letter) && !map[letter]) {
+        map[letter] = `/defaults/${file}`;
+      }
+    }
+  } catch {
+    // defaults dir missing — no stock images yet
+  }
+  return map;
+}
 
 const router = Router();
 
@@ -36,6 +64,7 @@ router.get("/api/letter-data", (_req, res) => {
     wordSuggestions: WORD_SUGGESTIONS,
     rWarningLetters: [...R_WARNING_LETTERS],
     letterHints: LETTER_HINTS,
+    defaultImages: getDefaultImageMap(),
   });
 });
 

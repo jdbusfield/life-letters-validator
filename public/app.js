@@ -6,6 +6,7 @@ let LETTER_HINTS = {};
 let DEFAULT_CARDS = {};
 let WORD_SUGGESTIONS = {};
 let R_WARNING_LETTERS = [];
+let DEFAULT_IMAGES = {};
 
 const state = {};
 let debounceTimers = {};
@@ -27,10 +28,34 @@ document.addEventListener("DOMContentLoaded", async () => {
   buildHelperSheet();
   buildGrid();
 
+  // Restore any saved progress from a previous visit (this device).
+  restoreProgress();
+
   // Event listeners
   document.getElementById("validateAllBtn").addEventListener("click", validateAll);
   document.getElementById("submitBtn").addEventListener("click", submitOrder);
   document.getElementById("defaultAllCheckbox").addEventListener("change", handleDefaultAllToggle);
+  document.getElementById("saveBtn").addEventListener("click", handleManualSave);
+  document.getElementById("previewBtn").addEventListener("click", openPreview);
+  document.getElementById("previewClose").addEventListener("click", closePreview);
+  document.getElementById("previewKeepEditing").addEventListener("click", closePreview);
+  document.getElementById("previewSubmit").addEventListener("click", () => {
+    closePreview();
+    submitOrder();
+  });
+  document.getElementById("previewOverlay").addEventListener("click", (e) => {
+    if (e.target.id === "previewOverlay") closePreview();
+  });
+  document.getElementById("restoreStartOver").addEventListener("click", startOver);
+
+  // Order fields + case preference: keep submit gating and autosave in sync.
+  document.getElementById("customerName").addEventListener("input", onFieldChange);
+  document.getElementById("customerEmail").addEventListener("input", onFieldChange);
+  document.querySelectorAll('input[name="casePreference"]').forEach((el) =>
+    el.addEventListener("change", scheduleSave)
+  );
+
+  updateSubmitButton();
 
   // Helper sheet toggle
   document.getElementById("helperToggle").addEventListener("click", () => {
@@ -41,6 +66,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 });
 
+function onFieldChange() {
+  updateSubmitButton();
+  scheduleSave();
+}
+
 async function loadLetterData() {
   try {
     const res = await fetch("/api/letter-data");
@@ -50,6 +80,7 @@ async function loadLetterData() {
     DEFAULT_CARDS = data.defaultCards;
     WORD_SUGGESTIONS = data.wordSuggestions;
     R_WARNING_LETTERS = data.rWarningLetters;
+    DEFAULT_IMAGES = data.defaultImages || {};
     dataLoaded = true;
   } catch (err) {
     console.error("Failed to load letter data:", err);
@@ -79,6 +110,30 @@ function buildHelperSheet() {
     `;
     grid.appendChild(row);
   });
+}
+
+// ---- Default preview (image if available, else lettered placeholder) ----
+
+function defaultPlaceholderSvg(letter, defaultWord) {
+  return `
+    <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+      <rect width="60" height="60" rx="8" fill="#f5e6b8"/>
+      <text x="30" y="28" text-anchor="middle" font-family="Comic Neue, cursive" font-size="18" font-weight="700" fill="#3d3224">${letter}</text>
+      <text x="30" y="48" text-anchor="middle" font-family="Comic Neue, cursive" font-size="11" fill="#7a6e5e">${defaultWord}</text>
+    </svg>`;
+}
+
+function defaultPreviewMarkup(letter, defaultWord) {
+  const imgUrl = DEFAULT_IMAGES[letter];
+  const svg = defaultPlaceholderSvg(letter, defaultWord);
+  if (imgUrl) {
+    // Show the real default image; if it fails to load, reveal the SVG fallback.
+    return `
+      <img class="default-preview-photo" src="${imgUrl}" alt="Default for ${letter}: ${defaultWord}"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+      <span class="default-preview-fallback" style="display:none;">${svg}</span>`;
+  }
+  return svg;
 }
 
 // ---- Letter Grid ----
@@ -148,11 +203,7 @@ function buildGrid() {
         </div>
         <button class="default-btn" id="default-btn-${letter}" data-letter="${letter}" title="Use default: ${defaultWord}">
           <div class="default-preview-img">
-            <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-              <rect width="60" height="60" rx="8" fill="#f5e6b8"/>
-              <text x="30" y="28" text-anchor="middle" font-family="Comic Neue, cursive" font-size="18" font-weight="700" fill="#3d3224">${letter}</text>
-              <text x="30" y="48" text-anchor="middle" font-family="Comic Neue, cursive" font-size="11" fill="#7a6e5e">${defaultWord}</text>
-            </svg>
+            ${defaultPreviewMarkup(letter, defaultWord)}
           </div>
           <span class="default-btn-label">Use Default</span>
         </button>
@@ -298,10 +349,20 @@ function handleInput(e) {
   if (debounceTimers[letter]) clearTimeout(debounceTimers[letter]);
 
   if (!word) {
+    state[letter].status = "empty";
+    state[letter].feedback = "";
     updateCard(letter, "empty", "");
     updateSubmitButton();
+    scheduleSave();
     return;
   }
+
+  // Word changed but not yet checked — mark pending so it can't slip through
+  // submission on a stale "valid" status from a previous word.
+  state[letter].status = "pending";
+  updateCard(letter, "empty", "");
+  updateSubmitButton();
+  scheduleSave();
 
   debounceTimers[letter] = setTimeout(() => {
     validateSingle(letter, word);
@@ -555,12 +616,81 @@ async function validateAll() {
 
 // ---- Submit ----
 
+function getCompletionStatus() {
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  const empty = [];
+  const invalid = [];
+  const validating = [];
+  const pending = [];
+
+  for (const l of letters) {
+    const s = state[l];
+    if (!s) continue;
+    if (s.isDefault) continue;
+    if (!s.word) {
+      empty.push(l);
+    } else if (s.status === "invalid" || s.status === "error") {
+      invalid.push(l);
+    } else if (s.status === "validating") {
+      validating.push(l);
+    } else if (s.status !== "valid") {
+      pending.push(l);
+    }
+  }
+
+  const name = document.getElementById("customerName").value.trim();
+  const email = document.getElementById("customerEmail").value.trim();
+
+  return { empty, invalid, validating, pending, name, email };
+}
+
+function abbreviate(list, max = 8) {
+  if (list.length <= max) return list.join(", ");
+  return `${list.slice(0, max).join(", ")} +${list.length - max} more`;
+}
+
 function updateSubmitButton() {
-  // Enable submit if there's some content
-  const hasAnyContent = Object.values(state).some(
-    (s) => s.word || s.photo || s.isDefault
-  );
-  document.getElementById("submitBtn").disabled = !hasAnyContent;
+  const { empty, invalid, validating, pending, name, email } =
+    getCompletionStatus();
+
+  // Submission is blocked while any letter still has an unresolved error, is
+  // mid-check, or has no word/default — and until name + email are filled in.
+  // Pending (typed-but-unverified) words are allowed through the button; they
+  // get auto-validated on submit, so an error there still stops the order.
+  const blocked =
+    invalid.length > 0 ||
+    validating.length > 0 ||
+    empty.length > 0 ||
+    !name ||
+    !email;
+
+  document.getElementById("submitBtn").disabled = blocked;
+
+  const hint = document.getElementById("submitHint");
+  if (!hint) return;
+
+  if (invalid.length > 0) {
+    hint.className = "submit-hint error";
+    hint.textContent = `⚠️ Fix ${invalid.length} letter${invalid.length > 1 ? "s" : ""} with an error before submitting: ${abbreviate(invalid)}`;
+  } else if (validating.length > 0) {
+    hint.className = "submit-hint loading";
+    hint.textContent = `Checking ${abbreviate(validating)}…`;
+  } else if (empty.length > 0) {
+    hint.className = "submit-hint";
+    hint.textContent = `${empty.length} letter${empty.length > 1 ? "s" : ""} still need a word or "Use Default": ${abbreviate(empty)}`;
+  } else if (!name || !email) {
+    hint.className = "submit-hint";
+    hint.textContent = "Add your name and email above to submit.";
+  } else if (pending.length > 0) {
+    hint.className = "submit-hint";
+    hint.textContent = `Ready — we'll double-check ${pending.length} unverified word${pending.length > 1 ? "s" : ""} when you submit.`;
+  } else {
+    hint.className = "submit-hint ok";
+    hint.textContent = "All set! ✅";
+  }
+
+  // Persist progress on every meaningful state change.
+  scheduleSave();
 }
 
 async function submitOrder() {
@@ -580,6 +710,11 @@ async function submitOrder() {
     document.getElementById("customerName").focus();
     return;
   }
+
+  // Safety net: validate any words that were typed but never checked, so an
+  // unverified-but-wrong word can't slip through. Errors here block the order.
+  const ok = await validatePendingBeforeSubmit();
+  if (!ok) return;
 
   // Check all letters are accounted for (either custom word or default)
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -644,6 +779,9 @@ async function submitOrder() {
 
     await res.json();
 
+    // Order is in — clear the locally saved draft.
+    clearProgress();
+
     // Show confirmation
     document.getElementById("confirmationSection").style.display = "block";
 
@@ -662,4 +800,319 @@ async function submitOrder() {
     submitBtn.disabled = false;
     submitBtn.innerHTML = '<span class="btn-icon">&#128230;</span> Submit Order';
   }
+}
+
+// ---- Validate pending words right before submit ----
+
+async function validatePendingBeforeSubmit() {
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  const pending = letters.filter((l) => {
+    const s = state[l];
+    return !s.isDefault && s.word && s.status !== "valid";
+  });
+
+  if (pending.length === 0) return true;
+
+  const submitBtn = document.getElementById("submitBtn");
+  const original = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="spinner"></span> Checking words...';
+
+  const entries = pending.map((letter) => {
+    updateCard(letter, "validating", '<span class="spinner"></span> Checking...');
+    state[letter].status = "validating";
+    return { letter, word: state[letter].word };
+  });
+
+  try {
+    const res = await fetch("/api/validate-batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entries }),
+    });
+    if (!res.ok) throw new Error("Validation failed");
+    const { results } = await res.json();
+
+    for (const { letter } of entries) {
+      const result = results[letter];
+      if (!result) {
+        updateCard(letter, "invalid", "⚠️ Could not check this word. Please review it.");
+        state[letter].status = "error";
+        continue;
+      }
+      if (result.valid) {
+        updateCard(letter, "valid", `${result.emoji || "✅"} ${result.message}`);
+        state[letter].status = "valid";
+        state[letter].feedback = result.message;
+      } else {
+        let msg = `${result.emoji || "❌"} ${result.message}`;
+        if (result.suggestion) msg += ` Try: ${result.suggestion}`;
+        updateCard(letter, "invalid", msg);
+        state[letter].status = "invalid";
+        state[letter].feedback = result.message;
+      }
+    }
+  } catch (err) {
+    console.error("Pre-submit validation error:", err);
+    // Don't hard-block on a network hiccup — mark unchecked words so the
+    // completeness check below can decide, and let the user retry.
+    for (const { letter } of entries) {
+      if (state[letter].status === "validating") state[letter].status = "error";
+    }
+  }
+
+  submitBtn.innerHTML = original;
+  updateSubmitButton();
+
+  const stillBad = pending.filter(
+    (l) => state[l].status === "invalid" || state[l].status === "error"
+  );
+  if (stillBad.length > 0) {
+    const firstCard = document.getElementById(`card-${stillBad[0]}`);
+    if (firstCard) firstCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    alert(
+      `Some words need attention before we can submit:\n\n${stillBad.join(", ")}\n\nPlease fix them (or click "Use Default") and try again.`
+    );
+    return false;
+  }
+  return true;
+}
+
+// ============================================
+// Save & resume (localStorage, per device)
+// ============================================
+
+const STORAGE_KEY = "lifeLetters:progress:v1";
+let saveTimer = null;
+let restoring = false;
+
+function scheduleSave() {
+  if (restoring || !dataLoaded) return;
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveProgress, 500);
+}
+
+function saveProgress() {
+  try {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    const data = {
+      savedAt: new Date().toISOString(),
+      orderNumber,
+      customerName: document.getElementById("customerName").value,
+      customerEmail: document.getElementById("customerEmail").value,
+      letterStyle:
+        document.querySelector('input[name="casePreference"]:checked')?.value || "mix",
+      letters: {},
+    };
+    let hasContent = false;
+    for (const l of letters) {
+      const s = state[l];
+      if (!s) continue;
+      if (s.word || s.isDefault || s.photoUrl) hasContent = true;
+      data.letters[l] = {
+        word: s.word || "",
+        status: s.status,
+        isDefault: !!s.isDefault,
+        photoUrl: s.photoUrl || null,
+        storagePath: s.storagePath || null,
+        feedback: s.feedback || "",
+      };
+    }
+    if (!hasContent && !data.customerName && !data.customerEmail) {
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (err) {
+    console.warn("Could not save progress:", err);
+  }
+}
+
+function clearProgress() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function restoreProgress() {
+  let data;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    data = JSON.parse(raw);
+  } catch {
+    return;
+  }
+  if (!data || !data.letters) return;
+
+  restoring = true;
+
+  if (data.customerName) document.getElementById("customerName").value = data.customerName;
+  if (data.customerEmail) document.getElementById("customerEmail").value = data.customerEmail;
+  if (data.letterStyle) {
+    const radio = document.querySelector(`input[name="casePreference"][value="${data.letterStyle}"]`);
+    if (radio) radio.checked = true;
+  }
+  if (data.orderNumber) orderNumber = data.orderNumber;
+
+  for (const [letter, saved] of Object.entries(data.letters)) {
+    if (!state[letter]) continue;
+    if (saved.isDefault) {
+      // Re-apply the default exactly as the user left it.
+      toggleDefault(letter);
+      continue;
+    }
+    if (!saved.word && !saved.photoUrl) continue;
+
+    state[letter].word = saved.word || "";
+    state[letter].status = saved.status || (saved.word ? "pending" : "empty");
+    state[letter].feedback = saved.feedback || "";
+    const input = document.getElementById(`input-${letter}`);
+    if (input) input.value = saved.word || "";
+
+    // Re-render the saved validation result on the card.
+    if (state[letter].status === "valid") {
+      updateCard(letter, "valid", `✅ ${saved.feedback || "Looks good"}`);
+    } else if (state[letter].status === "invalid" || state[letter].status === "error") {
+      updateCard(letter, "invalid", `❌ ${saved.feedback || "Please review this word"}`);
+    } else {
+      updateCard(letter, "empty", "");
+    }
+
+    // Restore the uploaded photo preview (the file lives in storage already).
+    if (saved.photoUrl) {
+      state[letter].photo = true;
+      state[letter].photoUrl = saved.photoUrl;
+      state[letter].storagePath = saved.storagePath || null;
+      showPhotoPreview(letter, saved.photoUrl);
+      setPhotoStatus(letter, "success", "Saved photo");
+    }
+  }
+
+  restoring = false;
+
+  // Show the resume banner.
+  const banner = document.getElementById("restoreBanner");
+  const text = document.getElementById("restoreText");
+  if (banner && text) {
+    let when = "";
+    if (data.savedAt) {
+      try {
+        when = ` from ${new Date(data.savedAt).toLocaleString()}`;
+      } catch {
+        /* ignore */
+      }
+    }
+    text.textContent = `Welcome back! We restored your saved progress${when}.`;
+    banner.style.display = "flex";
+  }
+
+  updateSubmitButton();
+}
+
+function startOver() {
+  if (!confirm("Start over and clear your saved progress on this device? This can't be undone.")) {
+    return;
+  }
+  clearProgress();
+  window.location.reload();
+}
+
+function handleManualSave() {
+  saveProgress();
+  showToast("Progress saved on this device — come back anytime to finish.");
+}
+
+// ============================================
+// Preview modal
+// ============================================
+
+function letterDisplayHtml(letter) {
+  const style =
+    document.querySelector('input[name="casePreference"]:checked')?.value || "mix";
+  const upper = letter.toUpperCase();
+  const lower = letter.toLowerCase();
+  if (style === "lower") return `<span class="pv-letter">${lower}</span>`;
+  if (style === "upper") return `<span class="pv-letter">${upper}</span>`;
+  return `<span class="pv-letter">${upper}<span class="pv-letter-lower">${lower}</span></span>`;
+}
+
+function previewImageHtml(letter) {
+  const s = state[letter];
+  let url = null;
+  if (!s.isDefault) {
+    // Prefer the uploaded URL; otherwise reuse the in-form preview thumbnail
+    // (a data URL) so the preview works even before the upload finishes.
+    if (s.photoUrl) {
+      url = s.photoUrl;
+    } else {
+      const wrap = document.getElementById(`preview-wrap-${letter}`);
+      const img = document.getElementById(`preview-${letter}`);
+      if (wrap && wrap.style.display !== "none" && img && img.src) url = img.src;
+    }
+  } else if (DEFAULT_IMAGES[letter]) {
+    url = DEFAULT_IMAGES[letter];
+  }
+
+  if (url) {
+    return `<div class="pv-photo"><img src="${url}" alt="Photo for ${letter}"></div>`;
+  }
+  const label = s.isDefault ? "Default photo" : "No photo yet";
+  return `<div class="pv-photo pv-photo-empty">${label}</div>`;
+}
+
+function openPreview() {
+  const grid = document.getElementById("previewGrid");
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  grid.innerHTML = letters
+    .map((letter) => {
+      const s = state[letter];
+      const word = s.isDefault ? DEFAULT_CARDS[letter] || "" : s.word || "";
+      const badge = s.isDefault
+        ? '<span class="pv-tag default">Default</span>'
+        : s.status === "valid"
+          ? '<span class="pv-tag ok">✓</span>'
+          : s.status === "invalid" || s.status === "error"
+            ? '<span class="pv-tag bad">!</span>'
+            : word
+              ? '<span class="pv-tag pending">?</span>'
+              : '<span class="pv-tag empty">—</span>';
+      return `
+        <div class="pv-card">
+          <div class="pv-card-top">${letterDisplayHtml(letter)}${badge}</div>
+          ${previewImageHtml(letter)}
+          <div class="pv-word">${word || "<em>empty</em>"}</div>
+        </div>`;
+    })
+    .join("");
+
+  document.getElementById("previewOverlay").style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+
+function closePreview() {
+  document.getElementById("previewOverlay").style.display = "none";
+  document.body.style.overflow = "";
+}
+
+// ============================================
+// Toast
+// ============================================
+
+let toastTimer = null;
+function showToast(message) {
+  const toast = document.getElementById("toast");
+  if (!toast) return;
+  toast.textContent = message;
+  toast.style.display = "block";
+  toast.classList.add("show");
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => {
+      toast.style.display = "none";
+    }, 300);
+  }, 3200);
 }
