@@ -483,21 +483,32 @@ function setPhotoStatus(letter, type, message) {
 
 // ---- Validation ----
 
+// Latest validation request id per letter. Clicking a suggestion chip right
+// after typing fires two checks (blur + chip); only the newest one may update
+// the card, so a slow or failed older request can't overwrite the result.
+const validationSeq = {};
+
 async function validateSingle(letter, word) {
   if (!word) return;
+
+  const seq = (validationSeq[letter] || 0) + 1;
+  validationSeq[letter] = seq;
+  const isStale = () => validationSeq[letter] !== seq;
 
   updateCard(letter, "validating", '<span class="spinner"></span> Checking...');
 
   try {
-    const res = await fetch("/api/validate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ letter, word }),
-    });
+    let res = await postValidate(letter, word);
+    // One retry on a server error (e.g. a transient AI API failure).
+    if (!res.ok && res.status >= 500 && !isStale()) {
+      res = await postValidate(letter, word);
+    }
+    if (isStale()) return;
 
-    if (!res.ok) throw new Error("Validation failed");
+    if (!res.ok) throw new Error(`Validation failed (${res.status})`);
 
     const result = await res.json();
+    if (isStale()) return;
 
     if (result.valid) {
       const msg = `${result.emoji || "\u2705"} ${result.message}`;
@@ -514,12 +525,21 @@ async function validateSingle(letter, word) {
       state[letter].feedback = result.message;
     }
   } catch (err) {
+    if (isStale()) return;
     console.error("Validation error:", err);
     updateCard(letter, "invalid", "\u26A0\uFE0F Could not validate. Please try again.");
     state[letter].status = "error";
   }
 
   updateSubmitButton();
+}
+
+function postValidate(letter, word) {
+  return fetch("/api/validate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ letter, word }),
+  });
 }
 
 function updateCard(letter, status, feedbackHtml) {
