@@ -1,5 +1,5 @@
 import { Router } from "express";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { readdirSync } from "fs";
 import { join, dirname, extname, basename } from "path";
 import { fileURLToPath } from "url";
@@ -41,17 +41,14 @@ function getDefaultImageMap() {
 
 const router = Router();
 
-// DeepSeek client (OpenAI-compatible) — lazy init to avoid crash if key is missing
+// Anthropic client (Claude Haiku 5.5) — lazy init to avoid crash if key is missing
 let client = null;
 function getClient() {
   if (!client) {
-    if (!process.env.DEEPSEEK_API_KEY) {
-      throw new Error("DEEPSEEK_API_KEY is not set");
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error("ANTHROPIC_API_KEY is not set");
     }
-    client = new OpenAI({
-      apiKey: process.env.DEEPSEEK_API_KEY,
-      baseURL: "https://api.deepseek.com",
-    });
+    client = new Anthropic();
   }
   return client;
 }
