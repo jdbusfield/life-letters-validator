@@ -117,9 +117,9 @@ function buildHelperSheet() {
 function defaultPlaceholderSvg(letter, defaultWord) {
   return `
     <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-      <rect width="60" height="60" rx="8" fill="#f5e6b8"/>
-      <text x="30" y="28" text-anchor="middle" font-family="Comic Neue, cursive" font-size="18" font-weight="700" fill="#3d3224">${letter}</text>
-      <text x="30" y="48" text-anchor="middle" font-family="Comic Neue, cursive" font-size="11" fill="#7a6e5e">${defaultWord}</text>
+      <rect width="60" height="60" rx="8" fill="var(--accent-light)"/>
+      <text x="30" y="28" text-anchor="middle" font-family="Comic Neue, cursive" font-size="18" font-weight="700" fill="var(--text)">${letter}</text>
+      <text x="30" y="48" text-anchor="middle" font-family="Comic Neue, cursive" font-size="11" fill="var(--text-light)">${defaultWord}</text>
     </svg>`;
 }
 
