@@ -5,7 +5,8 @@
 let LETTER_HINTS = {};
 let DEFAULT_CARDS = {};
 let WORD_SUGGESTIONS = {};
-let R_WARNING_LETTERS = [];
+let LETTER_TIPS = {};
+let phonicsVersion = null;
 let DEFAULT_IMAGES = {};
 
 const state = {};
@@ -48,12 +49,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   document.getElementById("restoreStartOver").addEventListener("click", startOver);
 
-  // Order fields + case preference: keep submit gating and autosave in sync.
+  // Keep order fields, submit gating, and autosave in sync.
   document.getElementById("customerName").addEventListener("input", onFieldChange);
   document.getElementById("customerEmail").addEventListener("input", onFieldChange);
-  document.querySelectorAll('input[name="casePreference"]').forEach((el) =>
-    el.addEventListener("change", scheduleSave)
-  );
 
   updateSubmitButton();
 
@@ -79,7 +77,8 @@ async function loadLetterData() {
     LETTER_HINTS = data.letterHints;
     DEFAULT_CARDS = data.defaultCards;
     WORD_SUGGESTIONS = data.wordSuggestions;
-    R_WARNING_LETTERS = data.rWarningLetters;
+    LETTER_TIPS = data.letterTips || {};
+    phonicsVersion = data.phonicsVersion;
     DEFAULT_IMAGES = data.defaultImages || {};
     dataLoaded = true;
   } catch (err) {
@@ -94,6 +93,10 @@ async function loadLetterData() {
   }
 }
 
+function displayLetter(letter) {
+  return letter === "Q" ? "qu" : letter.toLowerCase();
+}
+
 // ---- Brainstorming Helper Sheet ----
 
 function buildHelperSheet() {
@@ -105,7 +108,7 @@ function buildHelperSheet() {
     const row = document.createElement("div");
     row.className = "helper-row";
     row.innerHTML = `
-      <span class="helper-letter">${letter}</span>
+      <span class="helper-letter">${displayLetter(letter)}</span>
       <span class="helper-words">${suggestions.join(", ")}</span>
     `;
     grid.appendChild(row);
@@ -118,7 +121,7 @@ function defaultPlaceholderSvg(letter, defaultWord) {
   return `
     <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
       <rect width="60" height="60" rx="8" fill="var(--accent-light)"/>
-      <text x="30" y="28" text-anchor="middle" font-family="Comic Neue, cursive" font-size="18" font-weight="700" fill="var(--text)">${letter}</text>
+      <text x="30" y="28" text-anchor="middle" font-family="Comic Neue, cursive" font-size="18" font-weight="700" fill="var(--text)">${displayLetter(letter)}</text>
       <text x="30" y="48" text-anchor="middle" font-family="Comic Neue, cursive" font-size="11" fill="var(--text-light)">${defaultWord}</text>
     </svg>`;
 }
@@ -129,7 +132,7 @@ function defaultPreviewMarkup(letter, defaultWord) {
   if (imgUrl) {
     // Show the real default image; if it fails to load, reveal the SVG fallback.
     return `
-      <img class="default-preview-photo" src="${imgUrl}" alt="Default for ${letter}: ${defaultWord}"
+      <img class="default-preview-photo" src="${imgUrl}" loading="lazy" decoding="async" alt="Default for ${displayLetter(letter)}: ${defaultWord}"
         onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
       <span class="default-preview-fallback" style="display:none;">${svg}</span>`;
   }
@@ -153,22 +156,22 @@ function buildGrid() {
       isDefault: false,
     };
 
-    const suggestions = (WORD_SUGGESTIONS[letter] || []).slice(0, 6);
-    const hasRWarning = R_WARNING_LETTERS.includes(letter);
+    const suggestions = WORD_SUGGESTIONS[letter] || [];
+    const tip = LETTER_TIPS[letter];
     const defaultWord = DEFAULT_CARDS[letter] || "";
 
     const card = document.createElement("div");
     card.className = "letter-card";
     card.id = `card-${letter}`;
     card.innerHTML = `
-      <div class="letter-badge">${letter}</div>
+      <div class="letter-badge">${displayLetter(letter)}</div>
       <div class="letter-body">
         <div class="letter-hint">${LETTER_HINTS[letter] || ""}</div>
         <input
           type="text"
           class="letter-input"
           id="input-${letter}"
-          placeholder="Enter a word for ${letter}..."
+          placeholder="Enter a word for ${displayLetter(letter)}..."
           data-letter="${letter}"
           autocomplete="off"
         >
@@ -181,8 +184,8 @@ function buildGrid() {
             : ""
         }
         ${
-          hasRWarning
-            ? `<div class="r-warning">&#9888; Avoid words with an R right after the initial letter</div>`
+          tip
+            ? `<details class="letter-tip"><summary>Tips for this sound</summary><p>${tip}</p></details>`
             : ""
         }
       </div>
@@ -195,7 +198,7 @@ function buildGrid() {
               <span class="photo-label">Add photo</span>
             </div>
             <div class="photo-preview-wrap" id="preview-wrap-${letter}" style="display:none;">
-              <img class="photo-preview" id="preview-${letter}" alt="Photo for ${letter}">
+              <img class="photo-preview" id="preview-${letter}" alt="Photo for ${displayLetter(letter)}">
               <button class="photo-remove" id="remove-${letter}" data-letter="${letter}" title="Remove photo">&times;</button>
             </div>
           </div>
@@ -696,8 +699,7 @@ function updateSubmitButton() {
 async function submitOrder() {
   const customerName = document.getElementById("customerName").value.trim();
   const customerEmail = document.getElementById("customerEmail").value.trim();
-  const letterStyle =
-    document.querySelector('input[name="casePreference"]:checked')?.value || "mix";
+  const letterStyle = "lower";
 
   // Validation
   if (!customerEmail) {
@@ -787,7 +789,7 @@ async function submitOrder() {
 
     // Hide the form sections
     document.querySelector(".order-card").style.display = "none";
-    document.querySelector(".case-card").style.display = "none";
+    document.querySelector(".photo-help-card").style.display = "none";
     document.querySelector(".letters-section").style.display = "none";
     document.querySelector(".actions").style.display = "none";
     document.querySelector(".helper-card").style.display = "none";
@@ -900,8 +902,8 @@ function saveProgress() {
       orderNumber,
       customerName: document.getElementById("customerName").value,
       customerEmail: document.getElementById("customerEmail").value,
-      letterStyle:
-        document.querySelector('input[name="casePreference"]:checked')?.value || "mix",
+      letterStyle: "lower",
+      phonicsVersion,
       letters: {},
     };
     let hasContent = false;
@@ -951,10 +953,6 @@ function restoreProgress() {
 
   if (data.customerName) document.getElementById("customerName").value = data.customerName;
   if (data.customerEmail) document.getElementById("customerEmail").value = data.customerEmail;
-  if (data.letterStyle) {
-    const radio = document.querySelector(`input[name="casePreference"][value="${data.letterStyle}"]`);
-    if (radio) radio.checked = true;
-  }
   if (data.orderNumber) orderNumber = data.orderNumber;
 
   for (const [letter, saved] of Object.entries(data.letters)) {
@@ -967,8 +965,10 @@ function restoreProgress() {
     if (!saved.word && !saved.photoUrl) continue;
 
     state[letter].word = saved.word || "";
-    state[letter].status = saved.status || (saved.word ? "pending" : "empty");
-    state[letter].feedback = saved.feedback || "";
+    // Preserve words and photos, but recheck verdicts from older phonics rules.
+    const currentRules = data.phonicsVersion === phonicsVersion;
+    state[letter].status = currentRules ? saved.status || "pending" : saved.word ? "pending" : "empty";
+    state[letter].feedback = currentRules ? saved.feedback || "" : "";
     const input = document.getElementById(`input-${letter}`);
     if (input) input.value = saved.word || "";
 
@@ -1030,13 +1030,7 @@ function handleManualSave() {
 // ============================================
 
 function letterDisplayHtml(letter) {
-  const style =
-    document.querySelector('input[name="casePreference"]:checked')?.value || "mix";
-  const upper = letter.toUpperCase();
-  const lower = letter.toLowerCase();
-  if (style === "lower") return `<span class="pv-letter">${lower}</span>`;
-  if (style === "upper") return `<span class="pv-letter">${upper}</span>`;
-  return `<span class="pv-letter">${upper}<span class="pv-letter-lower">${lower}</span></span>`;
+  return `<span class="pv-letter">${displayLetter(letter)}</span>`;
 }
 
 function previewImageHtml(letter) {
@@ -1057,7 +1051,7 @@ function previewImageHtml(letter) {
   }
 
   if (url) {
-    return `<div class="pv-photo"><img src="${url}" alt="Photo for ${letter}"></div>`;
+    return `<div class="pv-photo"><img src="${url}" alt="Photo for ${displayLetter(letter)}"></div>`;
   }
   const label = s.isDefault ? "Default photo" : "No photo yet";
   return `<div class="pv-photo pv-photo-empty">${label}</div>`;

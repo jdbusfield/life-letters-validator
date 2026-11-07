@@ -10,6 +10,8 @@ import {
   WORD_SUGGESTIONS,
   R_WARNING_LETTERS,
   LETTER_HINTS,
+  LETTER_TIPS,
+  PHONICS_VERSION,
 } from "../lib/letterData.js";
 import { validateSingle, validateBatch } from "../lib/validation.js";
 import { generateOrderPDF } from "../lib/pdfGenerator.js";
@@ -61,6 +63,8 @@ router.get("/api/letter-data", (_req, res) => {
     wordSuggestions: WORD_SUGGESTIONS,
     rWarningLetters: [...R_WARNING_LETTERS],
     letterHints: LETTER_HINTS,
+    letterTips: LETTER_TIPS,
+    phonicsVersion: PHONICS_VERSION,
     defaultImages: getDefaultImageMap(),
   });
 });
@@ -112,13 +116,13 @@ router.post("/api/submit-order", async (req, res) => {
       return res.status(503).json({ error: "Database not configured" });
     }
 
-    const { orderNumber, customerEmail, customerName, letterStyle, entries } =
+    const { orderNumber, customerEmail, customerName, entries } =
       req.body;
 
-    if (!customerEmail || !letterStyle) {
+    if (!customerEmail) {
       return res
         .status(400)
-        .json({ error: "Email and letter style are required" });
+        .json({ error: "Email is required" });
     }
 
     const finalOrderNumber =
@@ -138,7 +142,7 @@ router.post("/api/submit-order", async (req, res) => {
         order_number: finalOrderNumber,
         customer_email: customerEmail,
         customer_name: customerName || null,
-        letter_style: letterStyle,
+        letter_style: "lower",
         status: "submitted",
       })
       .select()
@@ -158,7 +162,8 @@ router.post("/api/submit-order", async (req, res) => {
     const letterEntries = entries.map((e) => ({
       order_id: order.id,
       letter: e.letter.toUpperCase(),
-      word: e.word,
+      // Older open tabs may still send the previous default label.
+      word: e.isDefault ? DEFAULT_CARDS[e.letter.toUpperCase()] : e.word,
       is_default: e.isDefault || false,
       photo_url: e.photoUrl || null,
       photo_storage_path: e.photoStoragePath || null,
