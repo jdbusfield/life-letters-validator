@@ -1276,3 +1276,28 @@ input:focus-visible,
 .letter-tip summary { cursor: pointer; color: var(--brand-teal); font-weight: 600; }
 .letter-tip p { margin-top: 6px; line-height: 1.6; }
 .letter-tip summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* Letter-sound playback stays available when a default image is selected. */
+.letter-sound-control { margin: 3px 0 5px; }
+.letter-sound-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 7px 9px;
+  border: 1px solid var(--brand-blue);
+  border-radius: 8px;
+  background: var(--accent-bg);
+  color: var(--brand-teal);
+  font: 500 0.72rem/1.4 "Poppins", sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+.letter-sound-btn svg { flex: 0 0 16px; }
+.letter-sound-btn:hover { background: var(--accent-light); border-color: var(--accent); }
+.letter-sound-btn.is-playing { background: var(--accent); border-color: var(--accent); color: white; }
+.letter-sound-status { display: block; font-size: 0.7rem; line-height: 1.4; color: var(--text-light); }
+.letter-sound-status:not(:empty) { margin-top: 4px; }
+.audio-credit { margin-top: 7px; font-size: 0.75rem; }
+.audio-credit a { color: var(--brand-teal); text-underline-offset: 3px; }
