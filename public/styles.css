@@ -72,6 +72,7 @@ body {
 
 /* ---- Section Cards ---- */
 .intro-card,
+.photo-help-card,
 .helper-card,
 .order-card,
 .case-card,
@@ -751,7 +752,8 @@ h2 {
 .default-preview-photo {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  background: white;
+  object-fit: contain;
   border-radius: 8px;
   display: block;
 }
@@ -1212,6 +1214,7 @@ input:focus-visible,
   }
 
   .intro-card,
+  .photo-help-card,
   .helper-card,
   .order-card,
   .case-card,
@@ -1262,3 +1265,14 @@ input:focus-visible,
     grid-template-columns: 1fr;
   }
 }
+
+/* Parent photo guidance and optional phonics tips. */
+.photo-help-card { border-top-color: var(--brand-sage); }
+.photo-help-card h2 { font-size: 1.2rem; margin-bottom: 12px; }
+.photo-help-card ul { padding-left: 22px; }
+.photo-help-card li { margin-bottom: 10px; font-size: 0.9rem; }
+.photo-help-note { margin-top: 14px; font-size: 0.85rem; color: var(--text-light); }
+.letter-tip { margin-top: 6px; font-size: 0.75rem; color: var(--text-light); }
+.letter-tip summary { cursor: pointer; color: var(--brand-teal); font-weight: 600; }
+.letter-tip p { margin-top: 6px; line-height: 1.6; }
+.letter-tip summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
