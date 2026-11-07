@@ -510,7 +510,7 @@ async function validateSingle(letter, word) {
     } else {
       let msg = `${result.emoji || "\u274C"} ${result.message}`;
       if (result.suggestion) {
-        msg += ` Try: ${result.suggestion}`;
+        msg += ` Try: ${result.suggestion.replace(/^try\b[:\s]*/i, "")}`;
       }
       updateCard(letter, "invalid", msg);
       state[letter].status = "invalid";
@@ -596,7 +596,7 @@ async function validateAll() {
         state[letter].feedback = result.message;
       } else {
         let msg = `${result.emoji || "\u274C"} ${result.message}`;
-        if (result.suggestion) msg += ` Try: ${result.suggestion}`;
+        if (result.suggestion) msg += ` Try: ${result.suggestion.replace(/^try\b[:\s]*/i, "")}`;
         updateCard(letter, "invalid", msg);
         state[letter].status = "invalid";
         state[letter].feedback = result.message;
@@ -848,7 +848,7 @@ async function validatePendingBeforeSubmit() {
         state[letter].feedback = result.message;
       } else {
         let msg = `${result.emoji || "❌"} ${result.message}`;
-        if (result.suggestion) msg += ` Try: ${result.suggestion}`;
+        if (result.suggestion) msg += ` Try: ${result.suggestion.replace(/^try\b[:\s]*/i, "")}`;
         updateCard(letter, "invalid", msg);
         state[letter].status = "invalid";
         state[letter].feedback = result.message;
