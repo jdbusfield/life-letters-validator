@@ -137,6 +137,7 @@
     <!-- Footer -->
     <footer class="footer">
       <p><strong>Life Letters</strong> &mdash; where every sound becomes part of your little one's learning story</p>
+      <p class="audio-credit">Phonics sounds: <a href="https://phonicademy.com" target="_blank" rel="noopener noreferrer">Phonicademy</a></p>
     </footer>
   </div>
 
@@ -161,6 +162,8 @@
   <!-- Toast -->
   <div class="toast" id="toast" style="display:none;"></div>
 
+  <audio id="letterSoundAudio" preload="none"></audio>
   <script src="app.js"></script>
+  <script type="module" src="letter-audio.js"></script>
 </body>
 </html>

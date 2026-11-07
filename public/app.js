@@ -167,6 +167,17 @@ function buildGrid() {
       <div class="letter-badge">${displayLetter(letter)}</div>
       <div class="letter-body">
         <div class="letter-hint">${LETTER_HINTS[letter] || ""}</div>
+        <div class="letter-sound-control">
+          <button type="button" class="letter-sound-btn" id="sound-btn-${letter}" data-letter="${letter}"
+            aria-label="Click here to listen to the sound for ${displayLetter(letter)}" aria-busy="false"
+            aria-describedby="sound-status-${letter}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" focusable="false">
+              <path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/>
+            </svg>
+            <span>Click here to listen to the sound</span>
+          </button>
+          <span class="letter-sound-status" id="sound-status-${letter}" role="status" aria-live="polite"></span>
+        </div>
         <input
           type="text"
           class="letter-input"
