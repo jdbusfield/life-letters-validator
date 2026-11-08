@@ -178,14 +178,19 @@ function buildGrid() {
           </button>
           <span class="letter-sound-status" id="sound-status-${letter}" role="status" aria-live="polite"></span>
         </div>
-        <input
-          type="text"
-          class="letter-input"
-          id="input-${letter}"
-          placeholder="Enter a word for ${displayLetter(letter)}..."
-          data-letter="${letter}"
-          autocomplete="off"
-        >
+        <div class="word-field" id="word-field-${letter}">
+          <input
+            type="text"
+            class="letter-input"
+            id="input-${letter}"
+            placeholder="Enter a word for ${displayLetter(letter)}..."
+            aria-label="Word for ${displayLetter(letter)}"
+            data-letter="${letter}"
+            autocomplete="off"
+          >
+          <button type="button" class="clear-word-btn" id="clear-word-${letter}" data-letter="${letter}"
+            aria-label="Clear word for ${displayLetter(letter)}" title="Clear word" hidden>Clear</button>
+        </div>
         <div class="letter-feedback" id="feedback-${letter}"></div>
         ${
           suggestions.length > 0
@@ -249,6 +254,12 @@ function buildGrid() {
 // ---- Grid Click Handler (suggestions, defaults, photo) ----
 
 function handleGridClick(e) {
+  const clearButton = e.target.closest(".clear-word-btn");
+  if (clearButton) {
+    clearLetterWord(clearButton.dataset.letter);
+    return;
+  }
+
   // Suggestion chip click
   const chip = e.target.closest(".suggestion-chip");
   if (chip) {
@@ -351,6 +362,30 @@ function updateCardDefault(letter, isDefault) {
 }
 
 // ---- Text Input Handlers ----
+
+function updateWordField(letter) {
+  const input = document.getElementById(`input-${letter}`);
+  const hasWord = input.value.length > 0;
+  document.getElementById(`word-field-${letter}`).classList.toggle("has-word", hasWord);
+  document.getElementById(`clear-word-${letter}`).hidden = !hasWord;
+}
+
+function clearLetterWord(letter) {
+  clearTimeout(debounceTimers[letter]);
+  const input = document.getElementById(`input-${letter}`);
+  state[letter].word = "";
+  state[letter].status = "empty";
+  state[letter].feedback = "";
+  state[letter].isDefault = false;
+  input.value = "";
+  input.disabled = false;
+  updateCardDefault(letter, false);
+  updateCard(letter, "empty", "");
+  defaultAllAppliedTo.delete(letter);
+  document.getElementById("defaultAllCheckbox").checked = false;
+  updateSubmitButton();
+  input.focus();
+}
 
 function handleInput(e) {
   if (!e.target.classList.contains("letter-input")) return;
@@ -512,6 +547,7 @@ async function validateSingle(letter, word) {
     if (!res.ok) throw new Error("Validation failed");
 
     const result = await res.json();
+    if (state[letter].isDefault || state[letter].word !== word) return;
 
     if (result.valid) {
       const msg = `${result.emoji || "\u2705"} ${result.message}`;
@@ -528,6 +564,7 @@ async function validateSingle(letter, word) {
       state[letter].feedback = result.message;
     }
   } catch (err) {
+    if (state[letter].isDefault || state[letter].word !== word) return;
     console.error("Validation error:", err);
     updateCard(letter, "invalid", "\u26A0\uFE0F Could not validate. Please try again.");
     state[letter].status = "error";
@@ -593,7 +630,8 @@ async function validateAll() {
 
     const { results } = await res.json();
 
-    for (const { letter } of entries) {
+    for (const { letter, word } of entries) {
+      if (state[letter].isDefault || state[letter].word !== word) continue;
       const result = results[letter];
       if (!result) {
         updateCard(letter, "invalid", "\u26A0\uFE0F No result returned. Try validating individually.");
@@ -664,6 +702,7 @@ function abbreviate(list, max = 8) {
 }
 
 function updateSubmitButton() {
+  for (const letter of Object.keys(state)) updateWordField(letter);
   const { empty, invalid, validating, pending, name, email } =
     getCompletionStatus();
 
@@ -846,7 +885,8 @@ async function validatePendingBeforeSubmit() {
     if (!res.ok) throw new Error("Validation failed");
     const { results } = await res.json();
 
-    for (const { letter } of entries) {
+    for (const { letter, word } of entries) {
+      if (state[letter].isDefault || state[letter].word !== word) continue;
       const result = results[letter];
       if (!result) {
         updateCard(letter, "invalid", "⚠️ Could not check this word. Please review it.");
