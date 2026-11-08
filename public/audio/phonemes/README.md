@@ -1,10 +1,12 @@
 # Life Letters phonics playback
 
-These MP3s are embedded in the Life Letters survey's letter-sound buttons.
+These WAV clips are embedded in the Life Letters survey's letter-sound buttons.
 They are not a standalone audio pack or a separately offered download.
 
 Source: [Phonicademy phoneme map](https://phonicademy.com/phonemes).
-The 26 clips are unmodified. `qu.mp3` supplies /kw/ for the Q card; `x.mp3`
+The clips were converted to PCM WAV. Repeated pronunciations were trimmed to
+one complete pronunciation; continuous sounds were kept intact. The qu edit
+retains both /k/ and /w/ in the first /kw/. `qu.wav` supplies /kw/ for the Q card; `x.wav`
 supplies /ks/. Vowels use their short sounds, c uses /k/, and g uses /g/.
 
 Phonics sounds: Phonicademy (https://phonicademy.com).

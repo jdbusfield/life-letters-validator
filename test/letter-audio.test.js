@@ -16,13 +16,14 @@ function fixture() {
   return { audio, events, states, pending, player: createLetterSoundPlayer(audio, (...state) => states.push(state)) };
 }
 
-test("all 26 letter buttons map to bundled MP3s, including qu", async () => {
+test("all 26 letter buttons map to bundled single-pronunciation clips, including qu", async () => {
   const { audio, player, pending } = fixture();
   for (const letter of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
     const playing = player.play(letter);
     const file = letter === "Q" ? "qu" : letter.toLowerCase();
-    assert.equal(audio.src, `/audio/phonemes/${file}.mp3`);
-    const bytes = await readFile(new URL(`../public/audio/phonemes/${file}.mp3`, import.meta.url));
+    assert.equal(audio.src, `/audio/phonemes/${file}.wav`);
+    const bytes = await readFile(new URL(`../public/audio/phonemes/${file}.wav`, import.meta.url));
+    assert.equal(bytes.toString("ascii", 0, 4), "RIFF");
     assert(bytes.length > 1000, `${letter} clip is missing or empty`);
     pending.at(-1).resolve();
     await playing;
@@ -33,7 +34,7 @@ test("switching letters ignores the previous aborted request", async () => {
   const { player, audio, pending, states } = fixture();
   const first = player.play("G");
   const second = player.play("X");
-  assert.equal(audio.src, "/audio/phonemes/x.mp3");
+  assert.equal(audio.src, "/audio/phonemes/x.wav");
   pending[0].reject(new Error("AbortError"));
   pending[1].resolve();
   await Promise.all([first, second]);

@@ -489,31 +489,41 @@ h2 {
   font-style: italic;
 }
 
+.word-field { position: relative; margin: 4px 0; }
 .letter-input {
-  border: none;
+  border: 2px solid var(--brand-blue);
+  border-radius: 8px;
   outline: none;
-  background: transparent;
+  background: white;
   font-family: "Comic Neue", cursive, sans-serif;
   font-size: 1rem;
   font-weight: 700;
   color: var(--text);
   width: 100%;
-  padding: 3px 0;
+  min-height: 52px;
+  padding: 10px;
 }
-
-.letter-input::placeholder {
-  color: var(--placeholder);
-  font-weight: 400;
+.word-field.has-word .letter-input { padding-right: 54px; }
+.letter-input::placeholder { color: var(--placeholder); font-weight: 400; }
+.letter-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); }
+.letter-input:disabled { background: var(--accent-bg); opacity: 0.8; cursor: not-allowed; }
+.clear-word-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--brand-teal);
+  font: 600 0.7rem/1.2 "Poppins", sans-serif;
+  cursor: pointer;
 }
-
-.letter-input:focus {
-  border-bottom: 2px solid var(--accent);
-}
-
-.letter-input:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
+.clear-word-btn[hidden] { display: none; }
+.clear-word-btn:hover { background: var(--accent-light); }
 
 .letter-feedback {
   font-size: 0.78rem;
