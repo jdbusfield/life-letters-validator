@@ -6,7 +6,7 @@ services:
     buildCommand: npm install
     startCommand: node server.js
     envVars:
-      - key: ANTHROPIC_API_KEY
+      - key: OPENAI_API_KEY
         sync: false
       - key: SUPABASE_URL
         sync: false
