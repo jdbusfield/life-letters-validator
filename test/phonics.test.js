@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { DEFAULT_CARDS, WORD_SUGGESTIONS } from "../lib/letterData.js";
 import { validateSingle, validateBatch } from "../lib/validation.js";
 
-const noAI = { messages: { create() { throw new Error("Reviewed examples must not need AI"); } } };
+const noAI = { responses: { create() { throw new Error("Reviewed examples must not need AI"); } } };
 
 test("every displayed suggestion and default has a stable accepted verdict", async () => {
   for (const [letter, words] of Object.entries(WORD_SUGGESTIONS)) {
@@ -32,12 +32,12 @@ test("tricky sounds agree in single and batch validation", async () => {
 
 test("custom words still use AI without overriding reviewed batch verdicts", async () => {
   let request;
-  const client = { messages: { async create(input) {
+  const client = { responses: { async create(input) {
     request = input;
-    return { content: [{ type: "text", text: JSON.stringify({
+    return { status: "completed", output_text: JSON.stringify({
       B: { valid: true, message: "Good starting sound", suggestion: "" },
       X: { valid: true, message: "Unrequested override", suggestion: "" },
-    }) }] };
+    }) };
   } } };
   const batch = await validateBatch([
     { letter: "B", word: "Benny" }, { letter: "G", word: "gift" },
@@ -46,7 +46,7 @@ test("custom words still use AI without overriding reviewed batch verdicts", asy
   assert.equal(batch.B.valid, true);
   assert.equal(batch.G.valid, true);
   assert.equal(batch.X.valid, false);
-  assert.match(request.system, /FINAL \/ks\//);
-  assert.match(request.messages[0].content, /Benny/);
-  assert.doesNotMatch(request.messages[0].content, /x-ray|gift/);
+  assert.match(request.input[0].content[0].text, /FINAL \/ks\//);
+  assert.match(request.input[1].content, /Benny/);
+  assert.doesNotMatch(request.input[1].content, /x-ray|gift/);
 });

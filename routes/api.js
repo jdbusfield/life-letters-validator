@@ -1,5 +1,5 @@
 import { Router } from "express";
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { readdirSync } from "fs";
 import { join, dirname, extname, basename } from "path";
 import { fileURLToPath } from "url";
@@ -43,14 +43,14 @@ function getDefaultImageMap() {
 
 const router = Router();
 
-// Anthropic client (Claude Haiku 5.5) — lazy init to avoid crash if key is missing
+// Construct the client only for custom words that actually need an API check.
 let client = null;
 function getClient() {
   if (!client) {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      throw new Error("ANTHROPIC_API_KEY is not set");
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is not set");
     }
-    client = new Anthropic();
+    client = new OpenAI({ timeout: 30_000, maxRetries: 1 });
   }
   return client;
 }
@@ -78,13 +78,13 @@ router.post("/api/validate", async (req, res) => {
       return res.status(400).json({ error: "Letter and word are required" });
     }
 
-    const result = await validateSingle(letter, word, getClient());
+    const result = await validateSingle(letter, word, getClient);
     res.json(result);
   } catch (error) {
-    console.error("Validation error:", error);
+    console.error("Validation error:", { name: error.name, status: error.status });
     res.status(500).json({
       error: "Validation failed",
-      message: error.message,
+      message: "Could not check this word right now. Please try again.",
     });
   }
 });
@@ -98,13 +98,13 @@ router.post("/api/validate-batch", async (req, res) => {
       return res.status(400).json({ error: "Entries array is required" });
     }
 
-    const results = await validateBatch(entries, getClient());
+    const results = await validateBatch(entries, getClient);
     res.json({ results });
   } catch (error) {
-    console.error("Batch validation error:", error);
+    console.error("Batch validation error:", { name: error.name, status: error.status });
     res.status(500).json({
       error: "Batch validation failed",
-      message: error.message,
+      message: "Could not check these words right now. Please try again.",
     });
   }
 });
