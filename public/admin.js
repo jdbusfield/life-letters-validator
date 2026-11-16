@@ -74,6 +74,7 @@ function showDashboard() {
   document.getElementById("loginScreen").style.display = "none";
   document.getElementById("dashboard").style.display = "block";
   loadOrders();
+  window.loadSavedSurveys?.();
 }
 
 // ---- Orders ----

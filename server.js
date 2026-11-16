@@ -8,6 +8,7 @@ import multer from "multer";
 import apiRoutes from "./routes/api.js";
 import uploadRoutes from "./routes/upload.js";
 import adminRoutes from "./routes/admin.js";
+import surveyRoutes from "./routes/surveys.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -19,6 +20,10 @@ const app = express();
 
 // Trust proxy (needed for secure cookies on Render, Railway, etc.)
 app.set("trust proxy", 1);
+app.use((_req, res, next) => {
+  res.set("Referrer-Policy", "no-referrer").set("X-Content-Type-Options", "nosniff");
+  next();
+});
 
 // Middleware
 app.use(express.json());
@@ -43,6 +48,7 @@ app.use(express.static(join(__dirname, "public")));
 app.use(apiRoutes);
 app.use(uploadRoutes);
 app.use(adminRoutes);
+app.use(surveyRoutes);
 
 // Multer error handler
 app.use((err, _req, res, next) => {

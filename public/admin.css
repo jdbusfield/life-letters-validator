@@ -488,3 +488,12 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
 }
+/* Private per-set survey management */
+.survey-admin { background: #fff; border: 1px solid #d9dfd7; border-radius: 12px; padding: 20px; margin: 20px 0; }
+.survey-admin-fields { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 12px; align-items: end; }
+.survey-admin-fields label { display: grid; gap: 6px; }
+.survey-admin-fields input, .survey-link-panel textarea { box-sizing: border-box; width: 100%; padding: 10px; border: 1px solid #b9c6ba; border-radius: 6px; font: inherit; }
+.survey-link-panel { padding: 14px; margin: 12px 0; background: #f1f4ee; border-radius: 8px; }
+.survey-link-panel textarea { display: block; min-height: 180px; margin: 10px 0; }
+.survey-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; border-top: 1px solid #e0e4dc; padding: 12px 0; }
+.survey-admin-row span { flex: 1 1 300px; }
