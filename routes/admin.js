@@ -210,7 +210,8 @@ router.get("/api/admin/orders/:orderId/pdf", requireAdmin, async (req, res) => {
 
     const filename = `life-letters-order-${order.order_number}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("Content-Disposition", `${req.query.inline === "1" ? "inline" : "attachment"}; filename="${filename}"`);
 
     res.send(await readOrderPDF(order));
   } catch (error) {

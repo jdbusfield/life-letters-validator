@@ -195,7 +195,7 @@ function renderOrderDetail(order, entries) {
       }
       ${
         order.pdf_url
-          ? `<button class="btn btn-small btn-pdf" onclick="downloadPDF('${order.id}')">⬇ Download PDF</button>`
+          ? `<a class="btn btn-small btn-pdf" href="/api/admin/orders/${encodeURIComponent(order.id)}/pdf" download>⬇ Download PDF</a>`
           : '<span class="no-pdf-label">PDF not generated</span>'
       }
       <button class="btn btn-small" onclick="regeneratePDF('${order.id}')">🔄 Regenerate PDF</button>
@@ -204,7 +204,7 @@ function renderOrderDetail(order, entries) {
       order.pdf_url
         ? `<h3>Card Preview</h3>
            <div class="pdf-preview-wrap">
-             <iframe class="pdf-preview" src="${esc(order.pdf_url)}#toolbar=0" title="PDF Preview"></iframe>
+             <iframe class="pdf-preview" src="/api/admin/orders/${encodeURIComponent(order.id)}/pdf?inline=1#toolbar=0" title="PDF Preview"></iframe>
            </div>`
         : ""
     }
@@ -222,7 +222,7 @@ function renderOrderDetail(order, entries) {
           ${
             e.photo_url
               ? `<img class="entry-photo" src="${esc(e.photo_url)}" alt="${esc(e.letter)}">`
-              : '<div class="entry-no-photo">No photo</div>'
+              : `<div class="entry-no-photo">${e.is_default ? "Default photo included in PDF" : "No photo"}</div>`
           }
         </div>
       `
