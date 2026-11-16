@@ -74,6 +74,7 @@ function showDashboard() {
   document.getElementById("loginScreen").style.display = "none";
   document.getElementById("dashboard").style.display = "block";
   loadOrders();
+  window.loadSavedSurveys?.();
 }
 
 // ---- Orders ----
@@ -158,11 +159,14 @@ function goToPage(page) {
 
 async function viewOrder(orderId) {
   try {
-    const res = await fetch(`/api/admin/orders/${orderId}`);
+    const [res, reference] = await Promise.all([
+      fetch(`/api/admin/orders/${orderId}`),
+      fetch("/api/letter-data").then(response => response.ok ? response.json() : {}).catch(() => ({})),
+    ]);
     if (!res.ok) throw new Error("Failed to load order");
 
     const { order, entries } = await res.json();
-    renderOrderDetail(order, entries);
+    renderOrderDetail(order, entries, reference.defaultImages || {});
     document.getElementById("detailModal").classList.add("show");
   } catch (err) {
     console.error("View order error:", err);
@@ -170,7 +174,7 @@ async function viewOrder(orderId) {
   }
 }
 
-function renderOrderDetail(order, entries) {
+function renderOrderDetail(order, entries, defaultImages = {}) {
   const statusFlow = ["submitted", "in_progress", "printed", "shipped"];
   const currentIdx = statusFlow.indexOf(order.status);
   const nextStatus = currentIdx < statusFlow.length - 1 ? statusFlow[currentIdx + 1] : null;
@@ -194,7 +198,7 @@ function renderOrderDetail(order, entries) {
       }
       ${
         order.pdf_url
-          ? `<button class="btn btn-small btn-pdf" onclick="downloadPDF('${order.id}')">⬇ Download PDF</button>`
+          ? `<a class="btn btn-small btn-pdf" href="/api/admin/orders/${encodeURIComponent(order.id)}/pdf" download>⬇ Download PDF</a>`
           : '<span class="no-pdf-label">PDF not generated</span>'
       }
       <button class="btn btn-small" onclick="regeneratePDF('${order.id}')">🔄 Regenerate PDF</button>
@@ -203,7 +207,7 @@ function renderOrderDetail(order, entries) {
       order.pdf_url
         ? `<h3>Card Preview</h3>
            <div class="pdf-preview-wrap">
-             <iframe class="pdf-preview" src="${esc(order.pdf_url)}#toolbar=0" title="PDF Preview"></iframe>
+             <iframe class="pdf-preview" src="/api/admin/orders/${encodeURIComponent(order.id)}/pdf?inline=1#toolbar=0" title="PDF Preview"></iframe>
            </div>`
         : ""
     }
@@ -219,9 +223,9 @@ function renderOrderDetail(order, entries) {
             <div class="entry-status">${e.is_default ? "Default" : e.validation_status}</div>
           </div>
           ${
-            e.photo_url
-              ? `<img class="entry-photo" src="${esc(e.photo_url)}" alt="${esc(e.letter)}">`
-              : '<div class="entry-no-photo">No photo</div>'
+            (e.is_default ? defaultImages[e.letter] : e.photo_url)
+              ? `<img class="entry-photo" src="${esc(e.is_default ? defaultImages[e.letter] : e.photo_url)}" alt="${esc(e.letter)}: ${esc(e.word)}">`
+              : `<div class="entry-no-photo">${e.is_default ? "Default photo included in PDF" : "No photo"}</div>`
           }
         </div>
       `

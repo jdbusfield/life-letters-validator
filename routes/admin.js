@@ -2,7 +2,7 @@ import { Router } from "express";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import supabase from "../lib/supabase.js";
-import { regenerateOrderPDF } from "../lib/pdfGenerator.js";
+import { regenerateOrderPDF, readOrderPDF } from "../lib/pdfGenerator.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -131,6 +131,14 @@ router.patch(
         return res.status(400).json({ error: "Invalid status" });
       }
 
+      const { data: existing } = await supabase.from("orders").select("survey_id").eq("id", req.params.orderId).single();
+      if (existing?.survey_id) {
+        const { data, error } = await supabase.rpc("set_life_letters_order_status", { p_order_id: req.params.orderId, p_status: status });
+        if (error?.code === "22023") return res.status(409).json({ error: "This customer is still editing their cards. Wait for resubmission before preparing this set." });
+        if (error) throw error;
+        return res.json({ success: true, order: data });
+      }
+
       const { data: order, error } = await supabase
         .from("orders")
         .update({ status, updated_at: new Date().toISOString() })
@@ -164,21 +172,15 @@ router.get("/api/admin/export/:orderId", requireAdmin, async (req, res) => {
 
     const { data: order } = await supabase
       .from("orders")
-      .select("order_number")
+      .select("order_number,pdf_url,survey_id,survey_revision")
       .eq("id", req.params.orderId)
       .single();
-
-    const pdfResponse = await fetch(pdfUrl);
-    if (!pdfResponse.ok) {
-      return res.status(502).json({ error: "Failed to fetch PDF from storage" });
-    }
 
     const filename = `life-letters-order-${order?.order_number || req.params.orderId}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
-    const arrayBuffer = await pdfResponse.arrayBuffer();
-    res.send(Buffer.from(arrayBuffer));
+    res.send(await readOrderPDF(order));
   } catch (error) {
     console.error("Export error:", error);
     res.status(500).json({ error: error.message || "Failed to export order" });
@@ -194,7 +196,7 @@ router.get("/api/admin/orders/:orderId/pdf", requireAdmin, async (req, res) => {
 
     const { data: order } = await supabase
       .from("orders")
-      .select("pdf_url, order_number")
+      .select("pdf_url, order_number, survey_id,survey_revision")
       .eq("id", req.params.orderId)
       .single();
 
@@ -206,18 +208,12 @@ router.get("/api/admin/orders/:orderId/pdf", requireAdmin, async (req, res) => {
       return res.status(404).json({ error: "PDF not yet generated" });
     }
 
-    // Fetch the PDF from Supabase and stream it with download headers
-    const pdfResponse = await fetch(order.pdf_url);
-    if (!pdfResponse.ok) {
-      return res.status(502).json({ error: "Failed to fetch PDF from storage" });
-    }
-
     const filename = `life-letters-order-${order.order_number}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("Content-Disposition", `${req.query.inline === "1" ? "inline" : "attachment"}; filename="${filename}"`);
 
-    const arrayBuffer = await pdfResponse.arrayBuffer();
-    res.send(Buffer.from(arrayBuffer));
+    res.send(await readOrderPDF(order));
   } catch (error) {
     console.error("PDF download error:", error);
     res.status(500).json({ error: "Failed to get PDF" });

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta name="referrer" content="no-referrer">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Build Your Life Letters!</title>
@@ -63,7 +64,13 @@
     <!-- Order Info -->
     <section class="order-card" id="orderCard">
       <h2>Your Order</h2>
+      <p id="surveyInfo" hidden></p>
+      <p id="surveySaveStatus" role="status" aria-live="polite"></p>
       <div class="order-fields">
+        <div class="order-field" id="surveySetField" hidden>
+          <label for="surveySetLabel">Name this set</label>
+          <input type="text" id="surveySetLabel" maxlength="120" placeholder="For example, Oliver’s cards">
+        </div>
         <div class="order-field">
           <label for="customerName">Your Name</label>
           <input type="text" id="customerName" placeholder="Enter your name" required>
@@ -101,7 +108,7 @@
           <span class="btn-icon">&#128065;&#65039;</span> Preview Cards
         </button>
         <button class="btn btn-primary" id="submitBtn">
-          <span class="btn-icon">&#128230;</span> Submit Order
+          <span class="btn-icon">&#128230;</span> Submit My Life Letters Cards
         </button>
       </div>
       <p class="submit-hint" id="submitHint"></p>
@@ -133,7 +140,7 @@
       <div class="preview-actions">
         <button class="btn btn-secondary" id="previewKeepEditing">Keep editing</button>
         <button class="btn btn-primary" id="previewSubmit">
-          <span class="btn-icon">&#128230;</span> Submit Order
+          <span class="btn-icon">&#128230;</span> Submit My Life Letters Cards
         </button>
       </div>
     </div>
@@ -143,6 +150,7 @@
   <div class="toast" id="toast" style="display:none;"></div>
 
   <audio id="letterSoundAudio" preload="none"></audio>
+  <script src="survey-session.js"></script>
   <script src="app.js"></script>
   <script type="module" src="letter-audio.js"></script>
 </body>

@@ -14,6 +14,11 @@ let debounceTimers = {};
 let orderNumber = "";
 let dataLoaded = false;
 let defaultAllAppliedTo = new Set();
+let surveySession = null;
+let privateAccessBlocked = false;
+let initializingSurvey = true;
+let restoredLocalChanges = false;
+const SUBMIT_LABEL = '<span class="btn-icon">&#128230;</span> Submit My Life Letters Cards';
 
 // ---- Init ----
 
@@ -29,8 +34,36 @@ document.addEventListener("DOMContentLoaded", async () => {
   buildHelperSheet();
   buildGrid();
 
+  try {
+    surveySession = await window.LifeLettersSurvey.open();
+    privateAccessBlocked = !surveySession.active && surveySession.required;
+    if (surveySession.active) {
+      orderNumber = surveySession.info.orderReference;
+      document.getElementById("customerEmail").value = surveySession.info.customerEmail;
+      document.getElementById("customerEmail").readOnly = true;
+      document.getElementById("surveySetField").hidden = false;
+      document.getElementById("surveySetLabel").value = surveySession.info.setLabel;
+      document.getElementById("surveySetLabel").addEventListener("input", onFieldChange);
+      document.getElementById("surveyInfo").textContent = `Order ${orderNumber} · ${surveySession.info.setLabel}`;
+      document.getElementById("surveyInfo").hidden = false;
+      document.querySelector(".photo-help-note").textContent = "Your progress saves online automatically. Reopen your private email link on any device to continue.";
+    } else if (privateAccessBlocked) {
+      document.getElementById("surveySaveStatus").textContent = "You can try words below. Open your private email link to add photos, save online, and submit your cards.";
+    }
+  } catch (error) {
+    privateAccessBlocked = true;
+    document.getElementById("surveySaveStatus").textContent = error.message;
+    document.getElementById("surveySaveStatus").classList.add("error");
+  }
+
   // Restore any saved progress from a previous visit (this device).
-  restoreProgress();
+  restoreProgress(surveySession?.active ? surveySession.info.draft : null);
+
+  if (surveySession?.info?.status === "submitted") {
+    privateAccessBlocked = true;
+    document.querySelectorAll(".letters-section input, .letters-section button, .order-card input, #saveBtn, #defaultAllCheckbox, #validateAllBtn, #restoreStartOver").forEach(el => { el.disabled = true; });
+    surveySession.notice("Your Life Letters cards have been submitted. Contact us if you need to request a change.");
+  }
 
   // Event listeners
   document.getElementById("validateAllBtn").addEventListener("click", validateAll);
@@ -62,6 +95,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     content.classList.toggle("open");
     arrow.classList.toggle("open");
   });
+  initializingSurvey = false;
+  if (restoredLocalChanges) scheduleSave();
 });
 
 function onFieldChange() {
@@ -493,13 +528,15 @@ function removePhoto(letter) {
 }
 
 async function uploadPhoto(letter, file) {
+  if (privateAccessBlocked) { setPhotoStatus(letter, "error", "Open your private survey link to add photos."); return; }
   setPhotoStatus(letter, "uploading", "Uploading...");
 
   const formData = new FormData();
   formData.append("photo", file);
 
   try {
-    const res = await fetch(`/api/upload/${letter}?order=${encodeURIComponent(orderNumber || "unassigned")}`, {
+    const endpoint = surveySession?.active ? `${surveySession.path}/photos/${letter}` : `/api/upload/${letter}?order=${encodeURIComponent(orderNumber || "unassigned")}`;
+    const res = await fetch(endpoint, {
       method: "POST",
       body: formData,
     });
@@ -550,14 +587,14 @@ async function validateSingle(letter, word) {
     if (state[letter].isDefault || state[letter].word !== word) return;
 
     if (result.valid) {
-      const msg = `${result.emoji || "\u2705"} ${result.message}`;
+      const msg = `${result.emoji || "\u2705"} ${escapeSurveyText(result.message)}`;
       updateCard(letter, "valid", msg);
       state[letter].status = "valid";
       state[letter].feedback = result.message;
     } else {
-      let msg = `${result.emoji || "\u274C"} ${result.message}`;
+      let msg = `${result.emoji || "\u274C"} ${escapeSurveyText(result.message)}`;
       if (result.suggestion) {
-        msg += ` Try: ${result.suggestion.replace(/^try\b[:\s]*/i, "")}`;
+        msg += ` Try: ${escapeSurveyText(result.suggestion.replace(/^try\b[:\s]*/i, ""))}`;
       }
       updateCard(letter, "invalid", msg);
       state[letter].status = "invalid";
@@ -640,12 +677,12 @@ async function validateAll() {
       }
 
       if (result.valid) {
-        updateCard(letter, "valid", `${result.emoji || "\u2705"} ${result.message}`);
+        updateCard(letter, "valid", `${result.emoji || "\u2705"} ${escapeSurveyText(result.message)}`);
         state[letter].status = "valid";
         state[letter].feedback = result.message;
       } else {
-        let msg = `${result.emoji || "\u274C"} ${result.message}`;
-        if (result.suggestion) msg += ` Try: ${result.suggestion.replace(/^try\b[:\s]*/i, "")}`;
+        let msg = `${result.emoji || "\u274C"} ${escapeSurveyText(result.message)}`;
+        if (result.suggestion) msg += ` Try: ${escapeSurveyText(result.suggestion.replace(/^try\b[:\s]*/i, ""))}`;
         updateCard(letter, "invalid", msg);
         state[letter].status = "invalid";
         state[letter].feedback = result.message;
@@ -711,6 +748,8 @@ function updateSubmitButton() {
   // Pending (typed-but-unverified) words are allowed through the button; they
   // get auto-validated on submit, so an error there still stops the order.
   const blocked =
+    privateAccessBlocked ||
+    (surveySession?.active && Object.values(state).some(s => !s.isDefault && !s.storagePath)) ||
     invalid.length > 0 ||
     validating.length > 0 ||
     empty.length > 0 ||
@@ -718,11 +757,17 @@ function updateSubmitButton() {
     !email;
 
   document.getElementById("submitBtn").disabled = blocked;
+  const previewSubmit = document.getElementById("previewSubmit");
+  if (previewSubmit) previewSubmit.disabled = blocked;
 
   const hint = document.getElementById("submitHint");
   if (!hint) return;
 
-  if (invalid.length > 0) {
+  if (privateAccessBlocked) {
+    hint.textContent = surveySession?.info?.status === "submitted" ? "These cards have been submitted." : "Open your private email link to submit your cards.";
+  } else if (surveySession?.active && Object.values(state).some(s => !s.isDefault && s.word && !s.storagePath)) {
+    hint.textContent = "Add a matching photo for each custom word, or choose Use Default.";
+  } else if (invalid.length > 0) {
     hint.className = "submit-hint error";
     hint.textContent = `⚠️ Fix ${invalid.length} letter${invalid.length > 1 ? "s" : ""} with an error before submitting: ${abbreviate(invalid)}`;
   } else if (validating.length > 0) {
@@ -747,6 +792,7 @@ function updateSubmitButton() {
 }
 
 async function submitOrder() {
+  if (privateAccessBlocked) return;
   const customerName = document.getElementById("customerName").value.trim();
   const customerEmail = document.getElementById("customerEmail").value.trim();
   const letterStyle = "lower";
@@ -812,6 +858,12 @@ async function submitOrder() {
   submitBtn.innerHTML = '<span class="spinner"></span> Submitting...';
 
   try {
+    if (surveySession?.active) {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveProgress();
+      await surveySession.flush();
+      await surveySession.submit();
+    } else {
     const res = await fetch("/api/submit-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -830,6 +882,7 @@ async function submitOrder() {
     }
 
     await res.json();
+    }
 
     // Order is in — clear the locally saved draft.
     clearProgress();
@@ -850,7 +903,7 @@ async function submitOrder() {
     console.error("Submit error:", err);
     alert(`Submission failed: ${err.message}\n\nPlease try again.`);
     submitBtn.disabled = false;
-    submitBtn.innerHTML = '<span class="btn-icon">&#128230;</span> Submit Order';
+    submitBtn.innerHTML = SUBMIT_LABEL;
   }
 }
 
@@ -936,11 +989,12 @@ async function validatePendingBeforeSubmit() {
 // ============================================
 
 const STORAGE_KEY = "lifeLetters:progress:v1";
+function progressKey() { return surveySession?.active ? `lifeLetters:survey:${surveySession.id}` : STORAGE_KEY; }
 let saveTimer = null;
 let restoring = false;
 
 function scheduleSave() {
-  if (restoring || !dataLoaded) return;
+  if (initializingSurvey || restoring || !dataLoaded || surveySession?.info?.status === "submitted") return;
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(saveProgress, 500);
 }
@@ -956,6 +1010,8 @@ function saveProgress() {
       letterStyle: "lower",
       phonicsVersion,
       letters: {},
+      setLabel: document.getElementById("surveySetLabel")?.value || "",
+      serverRevision: surveySession?.revision,
     };
     let hasContent = false;
     for (const l of letters) {
@@ -972,10 +1028,11 @@ function saveProgress() {
       };
     }
     if (!hasContent && !data.customerName && !data.customerEmail) {
-      localStorage.removeItem(STORAGE_KEY);
-      return;
+      localStorage.removeItem(progressKey());
+      if (!surveySession?.active) return;
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    try { localStorage.setItem(progressKey(), JSON.stringify(data)); } catch { /* Online saving still works when browser storage is full. */ }
+    if (surveySession?.active) surveySession.save(data).catch(() => {});
   } catch (err) {
     console.warn("Could not save progress:", err);
   }
@@ -983,20 +1040,21 @@ function saveProgress() {
 
 function clearProgress() {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(progressKey());
   } catch {
     /* ignore */
   }
 }
 
-function restoreProgress() {
-  let data;
+function restoreProgress(cloudData = null) {
+  let data = cloudData;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    data = JSON.parse(raw);
+    const raw = localStorage.getItem(progressKey());
+    const local = raw ? JSON.parse(raw) : null;
+    if (!cloudData) data = local;
+    else if (local && local.serverRevision === surveySession.revision && surveySession.info.status !== "submitted") { data = local; restoredLocalChanges = true; }
   } catch {
-    return;
+    if (!data) return;
   }
   if (!data || !data.letters) return;
 
@@ -1005,6 +1063,10 @@ function restoreProgress() {
   if (data.customerName) document.getElementById("customerName").value = data.customerName;
   if (data.customerEmail) document.getElementById("customerEmail").value = data.customerEmail;
   if (data.orderNumber) orderNumber = data.orderNumber;
+  if (surveySession?.active) {
+    document.getElementById("customerEmail").value = surveySession.info.customerEmail;
+    document.getElementById("surveySetLabel").value = data.setLabel || surveySession.info.setLabel;
+  }
 
   for (const [letter, saved] of Object.entries(data.letters)) {
     if (!state[letter]) continue;
@@ -1025,9 +1087,9 @@ function restoreProgress() {
 
     // Re-render the saved validation result on the card.
     if (state[letter].status === "valid") {
-      updateCard(letter, "valid", `✅ ${saved.feedback || "Looks good"}`);
+      updateCard(letter, "valid", `✅ ${escapeSurveyText(saved.feedback || "Looks good")}`);
     } else if (state[letter].status === "invalid" || state[letter].status === "error") {
-      updateCard(letter, "invalid", `❌ ${saved.feedback || "Please review this word"}`);
+      updateCard(letter, "invalid", `❌ ${escapeSurveyText(saved.feedback || "Please review this word")}`);
     } else {
       updateCard(letter, "empty", "");
     }
@@ -1047,7 +1109,7 @@ function restoreProgress() {
   // Show the resume banner.
   const banner = document.getElementById("restoreBanner");
   const text = document.getElementById("restoreText");
-  if (banner && text) {
+  if (banner && text && Object.values(data.letters).some(entry => entry.word || entry.isDefault || entry.photoUrl)) {
     let when = "";
     if (data.savedAt) {
       try {
@@ -1064,6 +1126,12 @@ function restoreProgress() {
 }
 
 function startOver() {
+  if (surveySession?.active) {
+    if (!confirm("Clear the words and photos in this set?")) return;
+    for (const letter of Object.keys(state)) { clearLetterWord(letter); removePhoto(letter); }
+    saveProgress();
+    return;
+  }
   if (!confirm("Start over and clear your saved progress on this device? This can't be undone.")) {
     return;
   }
@@ -1071,8 +1139,13 @@ function startOver() {
   window.location.reload();
 }
 
-function handleManualSave() {
+async function handleManualSave() {
   saveProgress();
+  if (surveySession?.active) {
+    try { await surveySession.flush(); showToast("Saved online. Use your private email link to continue on any device."); }
+    catch (error) { showToast(error.message); }
+    return;
+  }
   showToast("Progress saved on this device — come back anytime to finish.");
 }
 
@@ -1102,7 +1175,7 @@ function previewImageHtml(letter) {
   }
 
   if (url) {
-    return `<div class="pv-photo"><img src="${url}" alt="Photo for ${displayLetter(letter)}"></div>`;
+    return `<div class="pv-photo"><img src="${escapeSurveyText(url)}" alt="Photo for ${displayLetter(letter)}"></div>`;
   }
   const label = s.isDefault ? "Default photo" : "No photo yet";
   return `<div class="pv-photo pv-photo-empty">${label}</div>`;
@@ -1128,13 +1201,17 @@ function openPreview() {
         <div class="pv-card">
           <div class="pv-card-top">${letterDisplayHtml(letter)}${badge}</div>
           ${previewImageHtml(letter)}
-          <div class="pv-word">${word || "<em>empty</em>"}</div>
+        <div class="pv-word">${word ? escapeSurveyText(word) : "<em>empty</em>"}</div>
         </div>`;
     })
     .join("");
 
   document.getElementById("previewOverlay").style.display = "flex";
   document.body.style.overflow = "hidden";
+}
+
+function escapeSurveyText(value) {
+  return String(value).replace(/[&<>"']/g, character => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[character]);
 }
 
 function closePreview() {

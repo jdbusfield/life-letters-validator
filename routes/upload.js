@@ -5,6 +5,10 @@ import supabase from "../lib/supabase.js";
 import { checkUploadedPhoto } from "../lib/imageCheck.js";
 
 const router = Router();
+router.use("/api/upload/:letter", (_req, res, next) => {
+  if (process.env.REQUIRE_SURVEY_ACCESS === "true") return res.status(401).json({ error: "Open your private survey link to upload photos" });
+  next();
+});
 
 // Use memory storage — files go to Supabase Storage, not local disk
 const upload = multer({

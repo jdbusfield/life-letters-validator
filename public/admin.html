@@ -31,6 +31,21 @@
         <button class="btn btn-small" id="logoutBtn">Log Out</button>
       </header>
 
+      <section class="survey-admin" aria-labelledby="savedSurveysHeading">
+        <h2 id="savedSurveysHeading">Saved customer surveys</h2>
+        <p>Create one private link per set for testing or a purchase you have verified. Shopify creation and automatic emails will be connected later.</p>
+        <form id="createSurveysForm" class="survey-admin-fields">
+          <label>Customer name<input id="surveyCustomerName" maxlength="120" required></label>
+          <label>Customer email<input id="surveyCustomerEmail" type="email" maxlength="254" required></label>
+          <label>Order or test reference<input id="surveyOrderReference" maxlength="100" required></label>
+          <label>Number of sets<input id="surveySetCount" type="number" min="1" max="20" value="1" required></label>
+          <button class="btn btn-primary" type="submit">Create private surveys</button>
+        </form>
+        <p id="surveyAdminNotice" role="status"></p>
+        <div id="surveyLinks"></div>
+        <div id="savedSurveysList"></div>
+      </section>
+
       <!-- Status Filters -->
       <div class="status-tabs">
         <button class="status-tab active" data-status="all">All</button>
@@ -79,5 +94,6 @@
   </div>
 
   <script src="admin.js"></script>
+  <script src="admin-surveys.js"></script>
 </body>
 </html>

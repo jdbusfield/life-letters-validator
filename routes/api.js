@@ -1,5 +1,5 @@
 import { Router } from "express";
-import OpenAI from "openai";
+import { getValidationClient as getClient } from "../lib/openaiClient.js";
 import { readdirSync } from "fs";
 import { join, dirname, extname, basename } from "path";
 import { fileURLToPath } from "url";
@@ -42,18 +42,6 @@ function getDefaultImageMap() {
 }
 
 const router = Router();
-
-// Construct the client only for custom words that actually need an API check.
-let client = null;
-function getClient() {
-  if (!client) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is not set");
-    }
-    client = new OpenAI({ timeout: 30_000, maxRetries: 1 });
-  }
-  return client;
-}
 
 // GET /api/letter-data — return all letter reference data to the frontend
 router.get("/api/letter-data", (_req, res) => {
@@ -111,6 +99,7 @@ router.post("/api/validate-batch", async (req, res) => {
 
 // POST /api/submit-order — submit completed form to Supabase
 router.post("/api/submit-order", async (req, res) => {
+  if (process.env.REQUIRE_SURVEY_ACCESS === "true") return res.status(401).json({ error: "Please submit through your private survey link" });
   try {
     if (!supabase) {
       return res.status(503).json({ error: "Database not configured" });
@@ -199,6 +188,7 @@ router.post("/api/submit-order", async (req, res) => {
 
 // GET /api/order-status/:orderNumber — check order status
 router.get("/api/order-status/:orderNumber", async (req, res) => {
+  if (process.env.REQUIRE_SURVEY_ACCESS === "true" && !req.session?.isAdmin) return res.status(401).json({ error: "Open your private survey link to see its status" });
   try {
     if (!supabase) {
       return res.status(503).json({ error: "Database not configured" });

@@ -1311,3 +1311,6 @@ input:focus-visible,
 .letter-sound-status:not(:empty) { margin-top: 4px; }
 .audio-credit { margin-top: 7px; font-size: 0.75rem; }
 .audio-credit a { color: var(--brand-teal); text-underline-offset: 3px; }
+#surveySaveStatus { font-size: .9rem; color: #516853; margin: 10px 0; }
+#surveySaveStatus.error { color: #9b342c; }
+[hidden] { display: none !important; }
