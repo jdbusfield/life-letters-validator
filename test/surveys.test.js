@@ -7,10 +7,12 @@ import express from "express";
 import { createSurveyRouter } from "../routes/surveys.js";
 import { hashToken, makeSurveyRows, safeDraft, LETTERS } from "../lib/surveyData.js";
 import { memoryDatabase } from "./survey-fixture.js";
+import uploadRoutes from "../routes/upload.js";
 
 async function fixture(t, options = {}) {
   const db = memoryDatabase();
   const app = express().use(express.json()).use((req, _res, next) => { req.session = { isAdmin: req.headers["x-test-admin"] === "yes" }; next(); })
+    .use(uploadRoutes)
     .use(createSurveyRouter({ db, generatePDF: async () => {}, validate: async entries => Object.fromEntries(entries.map(e => [e.letter, { valid: true }])), ...options }));
   const server = app.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -42,6 +44,20 @@ test("one purchase of two sets creates isolated random private links; plaintext 
   assert.equal(items[0].row.access_token_hash, hashToken(token));
   assert.equal(JSON.stringify(items[0].row).includes(token), false);
   assert.equal(new URL(items[0].link).search, "");
+});
+
+test("production access gate blocks legacy uploads without intercepting config, admin, or private routes", async t => {
+  const previous = process.env.REQUIRE_SURVEY_ACCESS;
+  process.env.REQUIRE_SURVEY_ACCESS = "true";
+  t.after(() => { if (previous === undefined) delete process.env.REQUIRE_SURVEY_ACCESS; else process.env.REQUIRE_SURVEY_ACCESS = previous; });
+  const f = await fixture(t);
+  const config = await f.request("/api/survey-config");
+  assert.equal(config.status, 200);
+  assert.equal((await config.json()).accessRequired, true);
+  assert.equal((await f.request("/api/upload/A", {})).status, 401);
+  const [a] = await f.create(1), cookie = await f.login(a);
+  assert.equal((await f.request(`/api/surveys/${a.id}`, null, { cookie })).status, 200);
+  assert.equal((await f.request("/api/admin/surveys", null, { admin: true })).status, 200);
 });
 
 test("draft normalization rejects cross-survey photos and ignores customer identity/URLs supplied by the browser", () => {

@@ -5,7 +5,7 @@ import supabase from "../lib/supabase.js";
 import { checkUploadedPhoto } from "../lib/imageCheck.js";
 
 const router = Router();
-router.use((_req, res, next) => {
+router.use("/api/upload/:letter", (_req, res, next) => {
   if (process.env.REQUIRE_SURVEY_ACCESS === "true") return res.status(401).json({ error: "Open your private survey link to upload photos" });
   next();
 });
