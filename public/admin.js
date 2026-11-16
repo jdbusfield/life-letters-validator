@@ -75,6 +75,7 @@ function showDashboard() {
   document.getElementById("dashboard").style.display = "block";
   loadOrders();
   window.loadSavedSurveys?.();
+  window.loadOrderAutomation?.();
 }
 
 // ---- Orders ----

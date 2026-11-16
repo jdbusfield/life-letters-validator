@@ -12,7 +12,7 @@ Each purchased set has a separate saved survey and private link. Two sets on one
 6. Review submitted cards in the existing admin order dashboard. Download the PDF for the printing workflow. Mark the set in progress before starting preparation, then printed and shipped as appropriate.
 7. If a parent requests a change before preparation starts, use **Reopen** in the saved survey list. The same link and order are reused. The parent must resubmit; fulfillment cannot advance while editing is open.
 
-Automatic creation from paid Shopify orders and transactional email delivery are not connected yet. Manually entered order references are operational references, not proof of payment verified by this application.
+Paid Shopify order creation and transactional email delivery are available behind a disabled-by-default configuration gate; see [Shopify automation setup](shopify-automation.md). Until activation and an end-to-end email test are complete, use the manual workflow above. Manually entered order references are operational references, not proof of payment verified by this application.
 
 ## Configuration and deployment
 

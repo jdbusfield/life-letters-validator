@@ -33,7 +33,7 @@
 
       <section class="survey-admin" aria-labelledby="savedSurveysHeading">
         <h2 id="savedSurveysHeading">Saved customer surveys</h2>
-        <p>Create one private link per set for testing or a purchase you have verified. Shopify creation and automatic emails will be connected later.</p>
+        <p>Create manual private links for tests or purchases you have verified. Automatic Shopify orders and survey emails appear below when connected.</p>
         <form id="createSurveysForm" class="survey-admin-fields">
           <label>Customer name<input id="surveyCustomerName" maxlength="120" required></label>
           <label>Customer email<input id="surveyCustomerEmail" type="email" maxlength="254" required></label>
@@ -44,6 +44,12 @@
         <p id="surveyAdminNotice" role="status"></p>
         <div id="surveyLinks"></div>
         <div id="savedSurveysList"></div>
+      </section>
+
+      <section class="survey-admin" aria-labelledby="orderAutomationHeading">
+        <h2 id="orderAutomationHeading">Shopify orders &amp; survey emails</h2>
+        <p id="orderAutomationStatus" role="status">Checking connection…</p>
+        <div id="orderAutomationJobs"></div>
       </section>
 
       <!-- Status Filters -->
@@ -95,5 +101,6 @@
 
   <script src="admin.js"></script>
   <script src="admin-surveys.js"></script>
+  <script src="admin-automation.js"></script>
 </body>
 </html>
