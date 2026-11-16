@@ -159,11 +159,14 @@ function goToPage(page) {
 
 async function viewOrder(orderId) {
   try {
-    const res = await fetch(`/api/admin/orders/${orderId}`);
+    const [res, reference] = await Promise.all([
+      fetch(`/api/admin/orders/${orderId}`),
+      fetch("/api/letter-data").then(response => response.ok ? response.json() : {}).catch(() => ({})),
+    ]);
     if (!res.ok) throw new Error("Failed to load order");
 
     const { order, entries } = await res.json();
-    renderOrderDetail(order, entries);
+    renderOrderDetail(order, entries, reference.defaultImages || {});
     document.getElementById("detailModal").classList.add("show");
   } catch (err) {
     console.error("View order error:", err);
@@ -171,7 +174,7 @@ async function viewOrder(orderId) {
   }
 }
 
-function renderOrderDetail(order, entries) {
+function renderOrderDetail(order, entries, defaultImages = {}) {
   const statusFlow = ["submitted", "in_progress", "printed", "shipped"];
   const currentIdx = statusFlow.indexOf(order.status);
   const nextStatus = currentIdx < statusFlow.length - 1 ? statusFlow[currentIdx + 1] : null;
@@ -220,8 +223,8 @@ function renderOrderDetail(order, entries) {
             <div class="entry-status">${e.is_default ? "Default" : e.validation_status}</div>
           </div>
           ${
-            e.photo_url
-              ? `<img class="entry-photo" src="${esc(e.photo_url)}" alt="${esc(e.letter)}">`
+            (e.is_default ? defaultImages[e.letter] : e.photo_url)
+              ? `<img class="entry-photo" src="${esc(e.is_default ? defaultImages[e.letter] : e.photo_url)}" alt="${esc(e.letter)}: ${esc(e.word)}">`
               : `<div class="entry-no-photo">${e.is_default ? "Default photo included in PDF" : "No photo"}</div>`
           }
         </div>
