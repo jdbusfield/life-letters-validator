@@ -52,6 +52,13 @@
         <div id="orderAutomationJobs"></div>
       </section>
 
+      <section class="survey-admin" aria-labelledby="submissionAlertsHeading">
+        <h2 id="submissionAlertsHeading">Completed survey notifications</h2>
+        <p id="submissionAlertsStatus" role="status">Checking notification setup…</p>
+        <button class="btn btn-small" id="refreshSubmissionAlerts" type="button">Refresh notifications</button>
+        <div id="submissionAlertsJobs"></div>
+      </section>
+
       <!-- Status Filters -->
       <div class="status-tabs">
         <button class="status-tab active" data-status="all">All</button>
@@ -102,5 +109,6 @@
   <script src="admin.js"></script>
   <script src="admin-surveys.js"></script>
   <script src="admin-automation.js"></script>
+  <script src="admin-submissions.js"></script>
 </body>
 </html>

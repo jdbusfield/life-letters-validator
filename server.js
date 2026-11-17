@@ -11,6 +11,7 @@ import adminRoutes from "./routes/admin.js";
 import surveyRoutes from "./routes/surveys.js";
 import shopifyWebhookRoutes, { createAutomationAdminRouter } from "./routes/shopify.js";
 import { startSurveyEmailWorker } from "./lib/surveyEmail.js";
+import { startSubmissionAlertWorker, createSubmissionAlertAdminRouter } from "./lib/submissionAlerts.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -54,6 +55,7 @@ app.use(uploadRoutes);
 app.use(adminRoutes);
 app.use(surveyRoutes);
 app.use(createAutomationAdminRouter());
+app.use(createSubmissionAlertAdminRouter());
 
 // Multer error handler
 app.use((err, _req, res, next) => {
@@ -77,4 +79,5 @@ app.listen(PORT, () => {
     `\n  Life Letters running at http://localhost:${PORT}\n`
   );
   startSurveyEmailWorker();
+  startSubmissionAlertWorker();
 });

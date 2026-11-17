@@ -76,6 +76,7 @@ function showDashboard() {
   loadOrders();
   window.loadSavedSurveys?.();
   window.loadOrderAutomation?.();
+  window.loadSubmissionAlerts?.();
 }
 
 // ---- Orders ----
