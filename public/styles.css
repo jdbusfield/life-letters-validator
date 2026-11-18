@@ -1371,3 +1371,14 @@ body {
 .photo-help-card { border-top-color: #cfd9c5; }
 .helper-card { border-top-color: #eda86c; }
 .letters-section { border-top-color: #fae0ab; }
+.photo-privacy-card { background: #fffefa; border: 1px solid #ffffffb8; border-top: 4px solid #cfd9c5; border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px 32px; margin-bottom: 20px; }
+.photo-privacy-card h2 { font-size: 1.3rem; margin-bottom: 12px; }
+.photo-privacy-card p { font-size: .9rem; color: var(--text-light); margin-bottom: 12px; }
+.photo-privacy-card a { color: var(--accent); text-underline-offset: 3px; }
+.photo-privacy-details { font-size: .85rem; margin: 16px 0; }
+.photo-privacy-details summary { cursor: pointer; color: var(--text); }
+.photo-privacy-details p { margin-top: 10px; }
+.photo-permission { display: flex; gap: 12px; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--accent-bg); font-size: .9rem; cursor: pointer; }
+.photo-permission input { flex-shrink: 0; width: 20px; height: 20px; margin-top: 3px; accent-color: var(--accent); }
+.photo-permission-help { margin: 8px 0 0 !important; font-size: .8rem !important; }
+@media(max-width: 639px) { .photo-privacy-card { padding: 22px 18px; } }

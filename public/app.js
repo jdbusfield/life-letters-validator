@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (surveySession?.info?.status === "submitted") {
     privateAccessBlocked = true;
-    document.querySelectorAll(".letters-section input, .letters-section button, .order-card input, #saveBtn, #defaultAllCheckbox, #validateAllBtn, #restoreStartOver").forEach(el => { el.disabled = true; });
+    document.querySelectorAll(".letters-section input, .letters-section button, .order-card input, .photo-privacy-card input, #saveBtn, #defaultAllCheckbox, #validateAllBtn, #restoreStartOver").forEach(el => { el.disabled = true; });
     surveySession.notice("Your Life Letters cards have been submitted. Contact us if you need to request a change.");
   }
 
@@ -83,6 +83,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("restoreStartOver").addEventListener("click", startOver);
 
   // Keep order fields, submit gating, and autosave in sync.
+  document.getElementById("photoPermission").addEventListener("change", onFieldChange);
   document.getElementById("childName").addEventListener("input", onFieldChange);
   document.getElementById("customerName").addEventListener("input", onFieldChange);
   document.getElementById("customerEmail").addEventListener("input", onFieldChange);
@@ -523,7 +524,15 @@ function handleDrop(e) {
   }
 }
 
+function confirmPhotoPermission() {
+  if (document.getElementById("photoPermission").checked) return true;
+  showToast("Please confirm the photo privacy checkbox before uploading or submitting.");
+  document.getElementById("photoPermission").focus();
+  return false;
+}
+
 function processPhoto(letter, file) {
+  if (!confirmPhotoPermission()) return;
   if (file.size > 10 * 1024 * 1024) {
     setPhotoStatus(letter, "error", "File too large (max 10 MB)");
     return;
@@ -555,12 +564,18 @@ function removePhoto(letter) {
 
 async function uploadPhoto(letter, file) {
   if (privateAccessBlocked) { setPhotoStatus(letter, "error", "Open your private survey link to add photos."); return; }
+  if (!confirmPhotoPermission()) return;
   setPhotoStatus(letter, "uploading", "Uploading...");
 
   const formData = new FormData();
   formData.append("photo", file);
 
   try {
+    if (surveySession?.active) {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveProgress();
+      await surveySession.flush();
+    }
     const endpoint = surveySession?.active ? `${surveySession.path}/photos/${letter}` : `/api/upload/${letter}?order=${encodeURIComponent(orderNumber || "unassigned")}`;
     const res = await fetch(endpoint, {
       method: "POST",
@@ -782,7 +797,8 @@ function updateSubmitButton() {
     !name ||
     !email ||
     !document.getElementById("childName").value.trim() ||
-    !selectedCardColor();
+    !selectedCardColor() ||
+    !document.getElementById("photoPermission").checked;
 
   document.getElementById("submitBtn").disabled = blocked;
   const previewSubmit = document.getElementById("previewSubmit");
@@ -810,6 +826,9 @@ function updateSubmitButton() {
   } else if (!document.getElementById("childName").value.trim() || !selectedCardColor()) {
     hint.className = "submit-hint";
     hint.textContent = "Add your child’s name and choose a card color above to submit.";
+  } else if (!document.getElementById("photoPermission").checked) {
+    hint.className = "submit-hint";
+    hint.textContent = "Confirm the photo privacy checkbox above to submit.";
   } else if (pending.length > 0) {
     hint.className = "submit-hint";
     hint.textContent = `Ready — we'll double-check ${pending.length} unverified word${pending.length > 1 ? "s" : ""} when you submit.`;
@@ -823,7 +842,7 @@ function updateSubmitButton() {
 }
 
 async function submitOrder() {
-  if (privateAccessBlocked) return;
+  if (privateAccessBlocked || !confirmPhotoPermission()) return;
   const customerName = document.getElementById("customerName").value.trim();
   const customerEmail = document.getElementById("customerEmail").value.trim();
   const letterStyle = "lower";
@@ -932,6 +951,7 @@ async function submitOrder() {
     document.getElementById("confirmationSection").style.display = "block";
 
     // Hide the form sections
+    document.querySelector(".photo-privacy-card").style.display = "none";
     document.querySelector(".order-card").style.display = "none";
     document.querySelector(".photo-help-card").style.display = "none";
     document.querySelector(".letters-section").style.display = "none";
@@ -1046,6 +1066,8 @@ function saveProgress() {
     const data = {
       savedAt: new Date().toISOString(),
       orderNumber,
+      photoPermissionAccepted: document.getElementById("photoPermission").checked,
+      photoPermissionVersion: document.getElementById("photoPermission").dataset.permissionVersion,
       childName: document.getElementById("childName").value,
       cardColor: selectedCardColor(),
       customerName: document.getElementById("customerName").value,
@@ -1103,6 +1125,7 @@ function restoreProgress(cloudData = null) {
 
   restoring = true;
 
+  document.getElementById("photoPermission").checked = data.photoPermissionAccepted === true && data.photoPermissionVersion === document.getElementById("photoPermission").dataset.permissionVersion;
   document.getElementById("childName").value = data.childName || "";
   document.querySelectorAll('input[name="cardColor"]').forEach(input => { input.checked = input.value === data.cardColor; });
   updateCardColorSelection();

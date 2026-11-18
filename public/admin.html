@@ -59,6 +59,14 @@
         <div id="submissionAlertsJobs"></div>
       </section>
 
+      <section class="survey-admin" aria-labelledby="photoRetentionHeading">
+        <h2 id="photoRetentionHeading">Photo privacy &amp; 90-day cleanup</h2>
+        <p>Mark a set Shipped only after the finished cards have shipped to the customer. Survey photos, personalized text, and PDFs are scheduled for removal 90 days later. Check Canva and downloaded working copies separately.</p>
+        <p id="photoRetentionStatus" role="status">Checking cleanup…</p>
+        <button class="btn btn-small" id="refreshPhotoRetention" type="button">Refresh cleanup</button>
+        <div id="photoRetentionJobs"></div>
+      </section>
+
       <!-- Status Filters -->
       <div class="status-tabs">
         <button class="status-tab active" data-status="all">All</button>
@@ -110,5 +118,6 @@
   <script src="admin-surveys.js"></script>
   <script src="admin-automation.js"></script>
   <script src="admin-submissions.js"></script>
+  <script src="admin-retention.js"></script>
 </body>
 </html>

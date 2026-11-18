@@ -13,6 +13,9 @@ window.LifeLettersSurvey = {
     const request = async (suffix = "", options = {}) => {
       const response = await fetch(path + suffix, { credentials: "same-origin", ...options });
       const data = await response.json();
+      if (response.status === 410) {
+        try { localStorage.removeItem(`lifeLetters:survey:${id}`); } catch { /* Device storage may be unavailable. */ }
+      }
       if (!response.ok) throw Object.assign(new Error(data.error || "Could not save. Keep this tab open and try again."), { status: response.status });
       return data;
     };

@@ -12,6 +12,7 @@ import surveyRoutes from "./routes/surveys.js";
 import shopifyWebhookRoutes, { createAutomationAdminRouter } from "./routes/shopify.js";
 import { startSurveyEmailWorker } from "./lib/surveyEmail.js";
 import { startSubmissionAlertWorker, createSubmissionAlertAdminRouter } from "./lib/submissionAlerts.js";
+import { startPhotoRetentionWorker, createRetentionAdminRouter } from "./lib/photoRetention.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -56,6 +57,7 @@ app.use(adminRoutes);
 app.use(surveyRoutes);
 app.use(createAutomationAdminRouter());
 app.use(createSubmissionAlertAdminRouter());
+app.use(createRetentionAdminRouter());
 
 // Multer error handler
 app.use((err, _req, res, next) => {
@@ -74,10 +76,14 @@ app.use((err, _req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3456;
-app.listen(PORT, () => {
+const stopWorkers = [];
+const httpServer = app.listen(PORT, () => {
   console.log(
     `\n  Life Letters running at http://localhost:${PORT}\n`
   );
-  startSurveyEmailWorker();
-  startSubmissionAlertWorker();
+  stopWorkers.push(startSurveyEmailWorker(), startSubmissionAlertWorker(), startPhotoRetentionWorker());
+});
+process.once("SIGTERM", () => {
+  stopWorkers.forEach(stop => stop?.());
+  httpServer.close();
 });

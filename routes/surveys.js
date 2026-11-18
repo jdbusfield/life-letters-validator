@@ -8,6 +8,7 @@ import { validateBatch } from "../lib/validation.js";
 import { getValidationClient } from "../lib/openaiClient.js";
 import { generateOrderPDF } from "../lib/pdfGenerator.js";
 import { cardPersonalization } from "../lib/cardPersonalization.js";
+import { PHOTO_PERMISSION_VERSION, hasPhotoPermission, requirePhotoPermission, requirePersonalizationAvailable } from "../lib/photoPrivacy.js";
 import { PHOTO_BUCKET, LETTERS, cookiePath, hashToken, newToken, validToken, isId, fault, safeDraft, submissionEntries, makeSurveyRows, photoUrl } from "../lib/surveyData.js";
 
 const cookieName = "ll_survey_access";
@@ -41,12 +42,15 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
     return data;
   }
   function checkAccess(survey, token) {
-    if (!validToken(token) || hashToken(token) !== survey.access_token_hash || survey.revoked_at || new Date(survey.expires_at).getTime() <= Date.now()) throw fault(401, "Open the private survey link from your email to continue");
+    if (!validToken(token) || hashToken(token) !== survey.access_token_hash) throw fault(401, "Open the private survey link from your email to continue");
+    requirePersonalizationAvailable(survey);
+    if (survey.revoked_at || new Date(survey.expires_at).getTime() <= Date.now()) throw fault(401, "Open the private survey link from your email to continue");
   }
   async function authorize(req, allowAdmin = false) {
     const survey = await getSurvey(req.params.id);
     const token = tokenFromCookie(req);
     if (!(allowAdmin && req.session?.isAdmin)) checkAccess(survey, token);
+    requirePersonalizationAvailable(survey);
     return { survey, token };
   }
   function editable(survey) { if (survey.status !== "draft") throw fault(409, "These cards have already been submitted. Contact Life Letters for changes."); }
@@ -57,6 +61,8 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
   }
   function publicSurvey(survey, photos) {
     const draft = safeDraft({ ...survey.draft, letters: survey.draft.letters || {} }, survey, photos);
+    draft.photoPermissionAccepted = hasPhotoPermission(survey);
+    draft.photoPermissionVersion = draft.photoPermissionAccepted ? PHOTO_PERMISSION_VERSION : "";
     draft.savedAt = survey.draft.savedAt || survey.updated_at || survey.created_at;
     return { id: survey.id, status: survey.status, revision: survey.revision,
       orderReference: survey.order_reference, setLabel: survey.set_label, customerEmail: survey.customer_email,
@@ -80,7 +86,10 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
     editable(survey);
     if (!Number.isInteger(req.body.revision) || req.body.revision < 0) throw fault(400, "A saved survey version is required");
     const draft = safeDraft(req.body.draft, survey, await photosFor(survey.id));
-    const { data, error } = await db.from("surveys").update({ draft, set_label: draft.setLabel || survey.set_label,
+    if (draft.photoPermissionAccepted && req.body.draft.photoPermissionVersion !== PHOTO_PERMISSION_VERSION) throw fault(422, "The photo privacy notice has changed. Reload and confirm the checkbox again.");
+    const permission = draft.photoPermissionAccepted ? { photo_permission_at: hasPhotoPermission(survey) ? survey.photo_permission_at : new Date().toISOString(), photo_permission_version: PHOTO_PERMISSION_VERSION }
+      : { photo_permission_at: null, photo_permission_version: null };
+    const { data, error } = await db.from("surveys").update({ draft, ...permission, set_label: draft.setLabel || survey.set_label,
       customer_name: draft.customerName, revision: req.body.revision + 1, updated_at: new Date().toISOString() })
       .eq("id", survey.id).eq("revision", req.body.revision).eq("status", "draft").eq("access_token_hash", hashToken(token))
       .select("revision,updated_at").maybeSingle();
@@ -90,7 +99,7 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
   }));
   router.post("/api/surveys/:id/photos/:letter", (req, res, next) => {
     // Authenticate before buffering a customer's photo.
-    authorize(req).then(context => { editable(context.survey); req.surveyContext = context; next(); }).catch(error => res.status(error.status || 500).json({ error: error.status ? error.message : "Could not upload photo" }));
+    authorize(req).then(context => { editable(context.survey); requirePhotoPermission(context.survey); req.surveyContext = context; next(); }).catch(error => res.status(error.status || 500).json({ error: error.status ? error.message : "Could not upload photo" }));
   }, upload.single("photo"), route(async (req, res) => {
     const { survey } = req.surveyContext;
     const letter = req.params.letter.toUpperCase();
@@ -131,6 +140,7 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
     const draft = safeDraft(survey.draft, survey, photos);
     if (!draft.customerName) throw fault(422, "Please enter your name");
     cardPersonalization(draft, true);
+    requirePhotoPermission(survey);
     const entries = submissionEntries(draft, photos);
     const results = await validate(entries.filter(e => !e.is_default).map(e => ({ letter: e.letter, word: e.word })));
     const invalid = entries.filter(e => !e.is_default && results[e.letter]?.valid !== true).map(e => e.letter);
@@ -153,7 +163,7 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
     next();
   });
   router.get("/api/admin/surveys", route(async (_req, res) => {
-    const { data, error } = await db.from("surveys").select("id,customer_email,customer_name,order_reference,set_label,unit_index,status,revision,created_at,updated_at,submitted_order_id")
+    const { data, error } = await db.from("surveys").select("id,customer_email,customer_name,order_reference,set_label,unit_index,status,revision,created_at,updated_at,submitted_order_id,personalization_purging_at,personalization_deleted_at")
       .order("created_at", { ascending: false }).limit(100);
     if (error) throw error;
     res.json({ surveys: data });
@@ -170,6 +180,7 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
     const base = process.env.PUBLIC_BASE_URL;
     if (!base) throw fault(503, "Survey address is not configured");
     const survey = await getSurvey(req.params.id);
+    requirePersonalizationAvailable(survey);
     const token = newToken();
     const { data, error } = await db.from("surveys").update({ access_token_hash: hashToken(token), revoked_at: null,
       expires_at: new Date(Date.now() + 180 * 86400_000).toISOString(), revision: survey.revision + 1 })

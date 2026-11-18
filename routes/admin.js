@@ -131,7 +131,8 @@ router.patch(
         return res.status(400).json({ error: "Invalid status" });
       }
 
-      const { data: existing } = await supabase.from("orders").select("survey_id").eq("id", req.params.orderId).single();
+      const { data: existing } = await supabase.from("orders").select("survey_id,personalization_deleted_at").eq("id", req.params.orderId).single();
+      if (existing?.personalization_deleted_at) return res.status(410).json({ error: "The personalization files for this set have been removed" });
       if (existing?.survey_id) {
         const { data, error } = await supabase.rpc("set_life_letters_order_status", { p_order_id: req.params.orderId, p_status: status });
         if (error?.code === "22023") return res.status(409).json({ error: "This customer is still editing their cards. Wait for resubmission before preparing this set." });

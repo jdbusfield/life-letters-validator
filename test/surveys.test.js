@@ -114,6 +114,7 @@ test("expired, revoked and cross-origin sessions are rejected", async t => {
 
 test("private photo uploads are isolated and only the owner or administrator can read them", async t => {
   const f = await fixture(t), [a, b] = await f.create(), cookieA = await f.login(a), cookieB = await f.login(b);
+  await f.request(`/api/surveys/${a.id}`, { revision: 0, draft: { customerName: "Parent", photoPermissionAccepted: true, photoPermissionVersion: "2026-11-18-v1", letters: {} } }, { method: "PUT", cookie: cookieA });
   const form = new FormData();
   form.append("photo", new Blob([await readFile(new URL("../public/defaults/A.jpg", import.meta.url))], { type: "image/jpeg" }), "apple.jpg");
   const response = await fetch(`${f.base}/api/surveys/${a.id}/photos/A`, { method: "POST", headers: { cookie: cookieA }, body: form });
@@ -134,7 +135,7 @@ test("submitting is idempotent, locks edits, and never trusts client validation 
   let validated = false;
   const f = await fixture(t, { validate: async entries => { validated = true; assert.equal(entries.length, 0); return {}; } });
   const [a] = await f.create(1), cookie = await f.login(a);
-  const draft = { customerName: "Parent", childName: "Jo", cardColor: "green", letters: Object.fromEntries(LETTERS.map(letter => [letter, { word: "ignored", isDefault: true }])) };
+  const draft = { customerName: "Parent", childName: "Jo", cardColor: "green", photoPermissionAccepted: true, photoPermissionVersion: "2026-11-18-v1", letters: Object.fromEntries(LETTERS.map(letter => [letter, { word: "ignored", isDefault: true }])) };
   assert.equal((await f.request(`/api/surveys/${a.id}`, { revision: 0, draft }, { method: "PUT", cookie })).status, 200);
   const submit = () => f.request(`/api/surveys/${a.id}/submit`, { revision: 1 }, { cookie });
   const responses = await Promise.all([submit(), submit()]);
@@ -148,7 +149,7 @@ test("submitting is idempotent, locks edits, and never trusts client validation 
 
 test("a custom word without an owned photo cannot be submitted even if the browser marks it valid", async t => {
   const f = await fixture(t), [a] = await f.create(1), cookie = await f.login(a);
-  const draft = { customerName: "Parent", letters: Object.fromEntries(LETTERS.map(letter => [letter, { word: "apple", isDefault: true }])) };
+  const draft = { customerName: "Parent", childName: "Jo", cardColor: "blue", photoPermissionAccepted: true, photoPermissionVersion: "2026-11-18-v1", letters: Object.fromEntries(LETTERS.map(letter => [letter, { word: "apple", isDefault: true }])) };
   draft.letters.A = { word: "apple", isDefault: false, status: "valid" };
   await f.request(`/api/surveys/${a.id}`, { revision: 0, draft }, { method: "PUT", cookie });
   assert.equal((await f.request(`/api/surveys/${a.id}/submit`, { revision: 1 }, { cookie })).status, 422);
@@ -181,7 +182,7 @@ test("server phonics rejection blocks an owned-photo submission despite a forged
   const [a] = await f.create(1), cookie = await f.login(a);
   const photoId = randomUUID(), path = `surveys/${a.id}/G/${photoId}.jpg`;
   f.db.tables.survey_photos.push({ id: photoId, survey_id: a.id, letter: "G", storage_path: path, content_type: "image/jpeg" });
-  const draft = { customerName: "Parent", childName: "Jo", cardColor: "blue", letters: Object.fromEntries(LETTERS.map(letter => [letter, { isDefault: true }])) };
+  const draft = { customerName: "Parent", childName: "Jo", cardColor: "blue", photoPermissionAccepted: true, photoPermissionVersion: "2026-11-18-v1", letters: Object.fromEntries(LETTERS.map(letter => [letter, { isDefault: true }])) };
   draft.letters.G = { word: "giraffe", isDefault: false, storagePath: path, status: "valid" };
   assert.equal((await f.request(`/api/surveys/${a.id}`, { revision: 0, draft }, { method: "PUT", cookie })).status, 200);
   const response = await f.request(`/api/surveys/${a.id}/submit`, { revision: 1 }, { cookie });
@@ -205,4 +206,30 @@ test("replacing a private link revokes old sessions and preserves the saved draf
   const newCookie = await f.login({ ...a, token });
   assert.equal((await f.request(`/api/surveys/${a.id}`, null, { cookie: newCookie })).status, 200);
   assert.equal(f.db.tables.surveys.length, 1);
+});
+
+test("photo permission is recorded by the server, restored on another device and required before buffering uploads",async t=>{
+  const f=await fixture(t),[a]=await f.create(1),cookie=await f.login(a);
+  assert.equal((await f.request(`/api/surveys/${a.id}/photos/A`,{}, {cookie})).status,422);
+  const draft={customerName:"Parent",photoPermissionAccepted:true,photoPermissionVersion:"2026-11-18-v1",photo_permission_at:"forged",letters:{}};
+  assert.equal((await f.request(`/api/surveys/${a.id}`,{revision:0,draft:{...draft,photoPermissionVersion:"old-notice"}},{cookie,method:"PUT"})).status,422);
+  assert.equal(f.db.tables.surveys[0].photo_permission_at,undefined);
+  assert.equal((await f.request(`/api/surveys/${a.id}`,{revision:0,draft},{cookie,method:"PUT"})).status,200);
+  assert.notEqual(f.db.tables.surveys[0].photo_permission_at,"forged");
+  const loaded=await(await f.request(`/api/surveys/${a.id}`,null,{cookie:await f.login(a)})).json();
+  assert.equal(loaded.draft.photoPermissionAccepted,true);
+  assert.equal((await f.request(`/api/surveys/${a.id}/photos/A`,{}, {cookie})).status,400);
+  await f.request(`/api/surveys/${a.id}`,{revision:1,draft:{...draft,photoPermissionAccepted:false}},{cookie,method:"PUT"});
+  assert.equal((await f.request(`/api/surveys/${a.id}/photos/A`,{}, {cookie})).status,422);
+});
+
+test("private links and admin photo access cannot recover a purging or erased set",async t=>{
+  const previous=process.env.PUBLIC_BASE_URL;process.env.PUBLIC_BASE_URL="https://survey.example.com";
+  t.after(()=>{if(previous===undefined)delete process.env.PUBLIC_BASE_URL;else process.env.PUBLIC_BASE_URL=previous;});
+  const f=await fixture(t),[a]=await f.create(1),cookie=await f.login(a);
+  f.db.tables.surveys[0].personalization_purging_at=new Date().toISOString();
+  assert.equal((await f.request(`/api/surveys/${a.id}`,null,{cookie})).status,410);
+  assert.equal((await f.request(`/api/surveys/${a.id}/photos/${randomUUID()}`,null,{admin:true})).status,410);
+  assert.equal((await f.request(`/api/admin/surveys/${a.id}/link`,{},{admin:true})).status,410);
+  assert.equal((await f.request(`/api/surveys/${a.id}`)).status,401);
 });
