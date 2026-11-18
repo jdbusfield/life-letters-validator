@@ -1337,3 +1337,37 @@ input:focus-visible,
 #surveySaveStatus { font-size: .9rem; color: #516853; margin: 10px 0; }
 #surveySaveStatus.error { color: #9b342c; }
 [hidden] { display: none !important; }
+
+/* Blue sky — selected from the card-color previews, November 18, 2026. */
+body {
+  --warm-white: #fffefa;
+  --cream: #ffffff;
+  --text: #2f4149;
+  --text-light: #52636c;
+  --border: #d7e0e4;
+  --shadow: 0 6px 22px #294c6220;
+  --shadow-hover: 0 8px 24px #294c6227;
+  --accent-bg: #edf6fc;
+  --accent-light: #dfedfa;
+  background-color: #9dc5e8;
+  background-image: radial-gradient(circle, #ffffff48 1.6px, transparent 2px);
+  background-size: 20px 20px;
+  background-attachment: fixed;
+}
+.brand-logo { filter: drop-shadow(0 2px 0 #ffffff80); }
+.intro-card,
+.order-card,
+.photo-help-card,
+.helper-card,
+.letters-section {
+  background: #fffefa;
+  border-color: #ffffffb8;
+}
+.order-field input { background: #fff; }
+.photo-help-card li + li { margin-top: 10px; }
+.letter-card { background: #fff; }
+.intro-card { border-top-color: #476c7d; }
+.order-card { border-top-color: #e0a19d; }
+.photo-help-card { border-top-color: #cfd9c5; }
+.helper-card { border-top-color: #eda86c; }
+.letters-section { border-top-color: #fae0ab; }
