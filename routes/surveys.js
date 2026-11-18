@@ -7,6 +7,7 @@ import { checkUploadedPhoto } from "../lib/imageCheck.js";
 import { validateBatch } from "../lib/validation.js";
 import { getValidationClient } from "../lib/openaiClient.js";
 import { generateOrderPDF } from "../lib/pdfGenerator.js";
+import { cardPersonalization } from "../lib/cardPersonalization.js";
 import { PHOTO_BUCKET, LETTERS, cookiePath, hashToken, newToken, validToken, isId, fault, safeDraft, submissionEntries, makeSurveyRows, photoUrl } from "../lib/surveyData.js";
 
 const cookieName = "ll_survey_access";
@@ -129,6 +130,7 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
     const photos = await photosFor(survey.id);
     const draft = safeDraft(survey.draft, survey, photos);
     if (!draft.customerName) throw fault(422, "Please enter your name");
+    cardPersonalization(draft, true);
     const entries = submissionEntries(draft, photos);
     const results = await validate(entries.filter(e => !e.is_default).map(e => ({ letter: e.letter, word: e.word })));
     const invalid = entries.filter(e => !e.is_default && results[e.letter]?.valid !== true).map(e => e.letter);

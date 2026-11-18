@@ -15,6 +15,7 @@ import {
 } from "../lib/letterData.js";
 import { validateSingle, validateBatch } from "../lib/validation.js";
 import { generateOrderPDF } from "../lib/pdfGenerator.js";
+import { CARD_COLORS, cardPersonalization } from "../lib/cardPersonalization.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -54,6 +55,7 @@ router.get("/api/letter-data", (_req, res) => {
     letterTips: LETTER_TIPS,
     phonicsVersion: PHONICS_VERSION,
     defaultImages: getDefaultImageMap(),
+    cardColors: CARD_COLORS,
   });
 });
 
@@ -114,6 +116,8 @@ router.post("/api/submit-order", async (req, res) => {
         .json({ error: "Email is required" });
     }
 
+    const { childName, cardColor } = cardPersonalization(req.body, true);
+
     const finalOrderNumber =
       (orderNumber && orderNumber.trim()) ||
       `LL-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
@@ -131,6 +135,8 @@ router.post("/api/submit-order", async (req, res) => {
         order_number: finalOrderNumber,
         customer_email: customerEmail,
         customer_name: customerName || null,
+        child_name: childName,
+        card_color: cardColor,
         letter_style: "lower",
         status: "submitted",
       })
@@ -182,7 +188,7 @@ router.post("/api/submit-order", async (req, res) => {
     });
   } catch (error) {
     console.error("Submit order error:", error);
-    res.status(500).json({ error: "Failed to submit order" });
+    res.status(error.status || 500).json({ error: error.status ? error.message : "Failed to submit order" });
   }
 });
 

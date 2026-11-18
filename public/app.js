@@ -8,6 +8,7 @@ let WORD_SUGGESTIONS = {};
 let LETTER_TIPS = {};
 let phonicsVersion = null;
 let DEFAULT_IMAGES = {};
+let CARD_COLORS = [];
 
 const state = {};
 let debounceTimers = {};
@@ -31,6 +32,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadLetterData();
 
   // Build UI
+  buildCardColors();
   buildHelperSheet();
   buildGrid();
 
@@ -41,9 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       orderNumber = surveySession.info.orderReference;
       document.getElementById("customerEmail").value = surveySession.info.customerEmail;
       document.getElementById("customerEmail").readOnly = true;
-      document.getElementById("surveySetField").hidden = false;
       document.getElementById("surveySetLabel").value = surveySession.info.setLabel;
-      document.getElementById("surveySetLabel").addEventListener("input", onFieldChange);
       document.getElementById("surveyInfo").textContent = `Order ${orderNumber} · ${surveySession.info.setLabel}`;
       document.getElementById("surveyInfo").hidden = false;
       document.querySelector(".photo-help-note").textContent = "Your progress saves online automatically. Reopen your private email link on any device to continue.";
@@ -83,6 +83,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("restoreStartOver").addEventListener("click", startOver);
 
   // Keep order fields, submit gating, and autosave in sync.
+  document.getElementById("childName").addEventListener("input", onFieldChange);
   document.getElementById("customerName").addEventListener("input", onFieldChange);
   document.getElementById("customerEmail").addEventListener("input", onFieldChange);
 
@@ -115,6 +116,7 @@ async function loadLetterData() {
     LETTER_TIPS = data.letterTips || {};
     phonicsVersion = data.phonicsVersion;
     DEFAULT_IMAGES = data.defaultImages || {};
+    CARD_COLORS = data.cardColors || [];
     dataLoaded = true;
   } catch (err) {
     console.error("Failed to load letter data:", err);
@@ -126,6 +128,30 @@ async function loadLetterData() {
       WORD_SUGGESTIONS[l] = [];
     });
   }
+}
+
+function selectedCardColor() {
+  return document.querySelector('input[name="cardColor"]:checked')?.value || "";
+}
+
+function updateCardColorSelection() {
+  const color = CARD_COLORS.find(option => option.id === selectedCardColor());
+  document.getElementById("cardColorSelection").textContent = color ? `${color.name} selected for this set.` : "Choose a color above.";
+}
+
+function buildCardColors() {
+  document.getElementById("cardColorOptions").innerHTML = CARD_COLORS.map(color => `
+    <label class="card-color-option">
+      <input type="radio" name="cardColor" value="${escapeSurveyText(color.id)}" required>
+      <span class="card-color-choice">
+        <span class="card-color-swatch" style="--card-swatch:${escapeSurveyText(color.hex)}" aria-hidden="true"><span class="color-check">✓</span></span>
+        <span>${escapeSurveyText(color.name)}</span>
+      </span>
+    </label>`).join("");
+  document.querySelectorAll('input[name="cardColor"]').forEach(input => input.addEventListener("change", () => {
+    updateCardColorSelection();
+    onFieldChange();
+  }));
 }
 
 function displayLetter(letter) {
@@ -754,7 +780,9 @@ function updateSubmitButton() {
     validating.length > 0 ||
     empty.length > 0 ||
     !name ||
-    !email;
+    !email ||
+    !document.getElementById("childName").value.trim() ||
+    !selectedCardColor();
 
   document.getElementById("submitBtn").disabled = blocked;
   const previewSubmit = document.getElementById("previewSubmit");
@@ -779,6 +807,9 @@ function updateSubmitButton() {
   } else if (!name || !email) {
     hint.className = "submit-hint";
     hint.textContent = "Add your name and email above to submit.";
+  } else if (!document.getElementById("childName").value.trim() || !selectedCardColor()) {
+    hint.className = "submit-hint";
+    hint.textContent = "Add your child’s name and choose a card color above to submit.";
   } else if (pending.length > 0) {
     hint.className = "submit-hint";
     hint.textContent = `Ready — we'll double-check ${pending.length} unverified word${pending.length > 1 ? "s" : ""} when you submit.`;
@@ -796,6 +827,14 @@ async function submitOrder() {
   const customerName = document.getElementById("customerName").value.trim();
   const customerEmail = document.getElementById("customerEmail").value.trim();
   const letterStyle = "lower";
+  const childName = document.getElementById("childName").value;
+  const cardColor = selectedCardColor();
+  if (!childName.trim() || !cardColor) {
+    alert("Please enter your child’s name and choose a card color.");
+    document.getElementById(!childName.trim() ? "childName" : "cardColorOptions").scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!childName.trim()) document.getElementById("childName").focus();
+    return;
+  }
 
   // Validation
   if (!customerEmail) {
@@ -872,6 +911,8 @@ async function submitOrder() {
         customerEmail,
         customerName,
         letterStyle,
+        childName,
+        cardColor,
         entries,
       }),
     });
@@ -1005,6 +1046,8 @@ function saveProgress() {
     const data = {
       savedAt: new Date().toISOString(),
       orderNumber,
+      childName: document.getElementById("childName").value,
+      cardColor: selectedCardColor(),
       customerName: document.getElementById("customerName").value,
       customerEmail: document.getElementById("customerEmail").value,
       letterStyle: "lower",
@@ -1027,7 +1070,7 @@ function saveProgress() {
         feedback: s.feedback || "",
       };
     }
-    if (!hasContent && !data.customerName && !data.customerEmail) {
+    if (!hasContent && !data.customerName && !data.customerEmail && !data.childName && !data.cardColor) {
       localStorage.removeItem(progressKey());
       if (!surveySession?.active) return;
     }
@@ -1060,6 +1103,9 @@ function restoreProgress(cloudData = null) {
 
   restoring = true;
 
+  document.getElementById("childName").value = data.childName || "";
+  document.querySelectorAll('input[name="cardColor"]').forEach(input => { input.checked = input.value === data.cardColor; });
+  updateCardColorSelection();
   if (data.customerName) document.getElementById("customerName").value = data.customerName;
   if (data.customerEmail) document.getElementById("customerEmail").value = data.customerEmail;
   if (data.orderNumber) orderNumber = data.orderNumber;

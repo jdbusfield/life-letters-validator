@@ -11,8 +11,8 @@ begin
   if exists(select 1 from storage.buckets where id in ('survey-photos','survey-pdfs') and public) then raise exception 'Survey buckets must be private'; end if;
   if (select count(*) from pg_class where oid in ('public.surveys'::regclass,'public.survey_photos'::regclass) and relrowsecurity)<>2 then raise exception 'RLS must be enabled'; end if;
   insert into public.surveys(id,provisioning_key,customer_email,customer_name,order_reference,set_label,unit_index,access_token_hash,expires_at,draft)
-  values(sid,'rollback-test:'||sid,'database-test@example.com','Test parent','ROLLBACK-TEST','Set 1',1,repeat('a',64),now()+interval '1 day','{"customerName":"Test parent","letters":{}}'),
-        (sid2,'rollback-test:'||sid2,'database-test@example.com','Test parent','ROLLBACK-TEST','Set 2',2,repeat('b',64),now()+interval '1 day','{"customerName":"Test parent","letters":{}}');
+  values(sid,'rollback-test:'||sid,'database-test@example.com','Test parent','ROLLBACK-TEST','Set 1',1,repeat('a',64),now()+interval '1 day','{"customerName":"Test parent","childName":"Test child","cardColor":"blue","letters":{}}'),
+        (sid2,'rollback-test:'||sid2,'database-test@example.com','Test parent','ROLLBACK-TEST','Set 2',2,repeat('b',64),now()+interval '1 day','{"customerName":"Test parent","childName":"Test child","cardColor":"blue","letters":{}}');
   select jsonb_agg(jsonb_build_object('letter',chr(i),'word','default','is_default',true,'photo_url',null,'photo_storage_path',null,'validation_status','skipped')) into entries from generate_series(65,90) i;
   begin
     perform public.submit_life_letters_survey(sid,0,repeat('b',64),entries);

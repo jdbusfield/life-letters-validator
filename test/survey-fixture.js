@@ -44,7 +44,7 @@ export function memoryDatabase() {
       if (args.p_token_hash !== survey.access_token_hash) return { error: { code: "42501" } };
       if (survey.status === "submitted") return { data: { orderId: survey.submitted_order_id, alreadySubmitted: true }, error: null };
       if (args.p_revision !== survey.revision) return { error: { code: "40001" } };
-      const order = { id: randomUUID(), survey_id: survey.id, order_number: `LL-${survey.id}`, status: "submitted", customer_email: survey.customer_email };
+      const order = { id: randomUUID(), survey_id: survey.id, order_number: `LL-${survey.id}`, status: "submitted", customer_email: survey.customer_email, child_name: survey.draft.childName, card_color: survey.draft.cardColor };
       tables.orders.push(order);
       tables.letter_entries.push(...args.p_entries.map(entry => ({ ...entry, order_id: order.id })));
       survey.status = "submitted"; survey.revision++; survey.submitted_order_id = order.id;

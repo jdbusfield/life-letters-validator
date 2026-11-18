@@ -322,6 +322,29 @@ h2 {
 }
 
 /* ---- Case Preference ---- */
+.child-name-field { max-width: 580px; margin: 20px 0 26px; }
+.child-name-field label, .card-color-field legend { color: var(--text); font-size: 1.05rem; font-weight: 600; }
+.required-note { color: var(--text-light); font-size: .78rem; font-weight: 400; }
+.field-help { color: var(--text-light); font-size: .88rem; margin: 6px 0 12px; }
+.card-color-field { border: 0; min-width: 0; }
+.card-color-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.card-color-option { cursor: pointer; position: relative; }
+.card-color-option input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.card-color-choice { display: flex; flex-direction: column; align-items: center; gap: 9px; border: 2px solid var(--border); border-radius: 12px; padding: 12px 6px; font-size: .85rem; background: #fff; }
+.card-color-swatch { display: grid; place-items: center; width: 100%; max-width: 94px; height: 66px; border-radius: 8px; background: radial-gradient(circle, #ffffff75 1.5px, transparent 2px) 0 0 / 10px 10px, var(--card-swatch); border: 1px solid #00000015; }
+.color-check { visibility: hidden; background: var(--text); color: white; border-radius: 50%; width: 25px; height: 25px; text-align: center; line-height: 25px; }
+.card-color-option input:checked + .card-color-choice { border-color: var(--accent); background: var(--accent-bg); font-weight: 600; }
+.card-color-option input:checked + .card-color-choice .color-check { visibility: visible; }
+.card-color-option input:focus-visible + .card-color-choice { outline: 3px solid var(--accent); outline-offset: 3px; }
+.card-color-option input:disabled + .card-color-choice { cursor: default; }
+.color-selection { font-size: .85rem; margin-top: 12px; color: var(--text-light); }
+.contact-details-heading { font-size: 1rem; border-top: 1px solid var(--border); margin: 25px 0 14px; padding-top: 22px; }
+@media (min-width: 640px) { .order-card .order-fields { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 450px) {
+  .card-color-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .card-color-swatch { height: 55px; }
+}
+
 .case-card h2,
 .letters-section h2 {
   font-size: 1.3rem;

@@ -89,7 +89,7 @@ test("unauthenticated clients cannot provision/read surveys; each cookie is scop
 
 test("saved words restore on another device and stale writes cannot overwrite a newer revision", async t => {
   const f = await fixture(t), [a] = await f.create(1), cookie = await f.login(a);
-  const draft = { customerName: "Parent", setLabel: "Oliver", letters: { A: { word: "apple", isDefault: true } } };
+  const draft = { customerName: "Parent", childName: "Éloïse-Jane", cardColor: "pink", setLabel: "Oliver", letters: { A: { word: "apple", isDefault: true } } };
   const save = () => f.request(`/api/surveys/${a.id}`, { revision: 0, draft }, { method: "PUT", cookie });
   assert.equal((await save()).status, 200);
   assert.equal((await save()).status, 409);
@@ -98,6 +98,8 @@ test("saved words restore on another device and stale writes cannot overwrite a 
   assert.equal(loaded.draft.letters.A.word, "apple");
   assert.equal(loaded.revision, 1);
   assert.equal(loaded.setLabel, "Oliver");
+  assert.equal(loaded.draft.childName, "Éloïse-Jane");
+  assert.equal(loaded.draft.cardColor, "pink");
 });
 
 test("expired, revoked and cross-origin sessions are rejected", async t => {
@@ -132,7 +134,7 @@ test("submitting is idempotent, locks edits, and never trusts client validation 
   let validated = false;
   const f = await fixture(t, { validate: async entries => { validated = true; assert.equal(entries.length, 0); return {}; } });
   const [a] = await f.create(1), cookie = await f.login(a);
-  const draft = { customerName: "Parent", letters: Object.fromEntries(LETTERS.map(letter => [letter, { word: "ignored", isDefault: true }])) };
+  const draft = { customerName: "Parent", childName: "Jo", cardColor: "green", letters: Object.fromEntries(LETTERS.map(letter => [letter, { word: "ignored", isDefault: true }])) };
   assert.equal((await f.request(`/api/surveys/${a.id}`, { revision: 0, draft }, { method: "PUT", cookie })).status, 200);
   const submit = () => f.request(`/api/surveys/${a.id}/submit`, { revision: 1 }, { cookie });
   const responses = await Promise.all([submit(), submit()]);
@@ -153,6 +155,24 @@ test("a custom word without an owned photo cannot be submitted even if the brows
   assert.equal(f.db.tables.orders.length, 0);
 });
 
+test("an earlier browser cannot submit without the new required details, and sets keep separate choices", async t => {
+  const f = await fixture(t), [a, b] = await f.create(), cookieA = await f.login(a), cookieB = await f.login(b);
+  const letters = Object.fromEntries(LETTERS.map(letter => [letter, { isDefault: true }]));
+  const oldDraft = { customerName: "Parent", letters };
+  await f.request(`/api/surveys/${a.id}`, { revision: 0, draft: oldDraft }, { method: "PUT", cookie: cookieA });
+  const missing = await f.request(`/api/surveys/${a.id}/submit`, { revision: 1 }, { cookie: cookieA });
+  assert.equal(missing.status, 422);
+  assert.match((await missing.json()).error, /child's name/);
+  assert.equal(f.db.tables.orders.length, 0);
+  for (const [item, cookie, revision, childName, cardColor] of [[a,cookieA,1,"Ava","pink"],[b,cookieB,0,"Leo","blue"]]) {
+    const response = await f.request(`/api/surveys/${item.id}`, { revision, draft: { ...oldDraft, childName, cardColor } }, { method: "PUT", cookie });
+    assert.equal(response.status, 200);
+    const loaded = await (await f.request(`/api/surveys/${item.id}`, null, { cookie })).json();
+    assert.equal(loaded.draft.childName, childName);
+    assert.equal(loaded.draft.cardColor, cardColor);
+  }
+});
+
 test("server phonics rejection blocks an owned-photo submission despite a forged valid flag", async t => {
   const f = await fixture(t, { validate: async entries => {
     assert.deepEqual(entries, [{ letter: "G", word: "giraffe" }]);
@@ -161,7 +181,7 @@ test("server phonics rejection blocks an owned-photo submission despite a forged
   const [a] = await f.create(1), cookie = await f.login(a);
   const photoId = randomUUID(), path = `surveys/${a.id}/G/${photoId}.jpg`;
   f.db.tables.survey_photos.push({ id: photoId, survey_id: a.id, letter: "G", storage_path: path, content_type: "image/jpeg" });
-  const draft = { customerName: "Parent", letters: Object.fromEntries(LETTERS.map(letter => [letter, { isDefault: true }])) };
+  const draft = { customerName: "Parent", childName: "Jo", cardColor: "blue", letters: Object.fromEntries(LETTERS.map(letter => [letter, { isDefault: true }])) };
   draft.letters.G = { word: "giraffe", isDefault: false, storagePath: path, status: "valid" };
   assert.equal((await f.request(`/api/surveys/${a.id}`, { revision: 0, draft }, { method: "PUT", cookie })).status, 200);
   const response = await f.request(`/api/surveys/${a.id}/submit`, { revision: 1 }, { cookie });

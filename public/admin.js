@@ -187,6 +187,8 @@ function renderOrderDetail(order, entries, defaultImages = {}) {
       <div><strong>Customer:</strong> ${esc(order.customer_name || "—")}</div>
       <div><strong>Email:</strong> ${esc(order.customer_email)}</div>
       <div><strong>Style:</strong> ${esc(order.letter_style)}</div>
+      <div><strong>Child’s title-card name:</strong> ${esc(order.child_name || "Not provided on this earlier set")}</div>
+      <div><strong>Card color:</strong> ${esc(order.card_color ? order.card_color[0].toUpperCase() + order.card_color.slice(1) : "Not selected on this earlier set")}</div>
       <div><strong>Status:</strong> <span class="status-badge status-${order.status}">${formatStatus(order.status)}</span></div>
       <div><strong>Created:</strong> ${formatDate(order.created_at)}</div>
     </div>
