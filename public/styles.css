@@ -1382,3 +1382,15 @@ body {
 .photo-permission input { flex-shrink: 0; width: 20px; height: 20px; margin-top: 3px; accent-color: var(--accent); }
 .photo-permission-help { margin: 8px 0 0 !important; font-size: .8rem !important; }
 @media(max-width: 639px) { .photo-privacy-card { padding: 22px 18px; } }
+.child-photo-field { margin:24px 0; padding:20px; border:1px solid var(--border, #d8e2e6); border-radius:16px; background:#f3f8fc; }
+.child-photo-field h3 { margin:0 0 8px; }
+.child-photo-layout { display:flex; align-items:center; gap:24px; margin-top:18px; }
+.child-photo-circle { flex:0 0 180px; width:180px; height:180px; border-radius:50%; overflow:hidden; background:white; border:3px dotted #9dc5e8; display:grid; place-items:center; color:#526873; text-align:center; }
+.child-photo-circle img { width:100%; height:100%; object-fit:cover; }
+.child-photo-controls { flex:1; min-width:0; }
+.child-photo-controls button { margin:0 8px 10px 0; }
+#childPhotoPosition label { display:block; font-size:13px; margin-top:8px; }
+#childPhotoPosition input { width:100%; accent-color:#3f6e7d; }
+#childPhotoStatus { font-size:13px; margin:10px 0 0; }
+#childPhotoStatus.error { color:#ad3434; }
+@media(max-width:520px){.child-photo-layout{flex-direction:column;align-items:stretch;gap:14px}.child-photo-circle{align-self:center;flex-basis:180px}.child-photo-field{padding:16px}}

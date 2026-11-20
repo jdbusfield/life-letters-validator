@@ -32,7 +32,8 @@ async function fixture(t, options = {}) {
     assert.equal(response.status, 200);
     return response.headers.get("set-cookie").split(";")[0];
   };
-  return { db, base, request, create, login };
+  const title = item => {const id=randomUUID(),path=`surveys/${item.id}/TITLE/${id}.jpg`;db.tables.survey_photos.push({id,survey_id:item.id,letter:"TITLE",storage_path:path,content_type:"image/jpeg"});return {storagePath:path,position:{x:25,y:65}};};
+  return { db, base, request, create, login, title };
 }
 
 test("one purchase of two sets creates isolated random private links; plaintext tokens are not stored", () => {
@@ -136,6 +137,7 @@ test("submitting is idempotent, locks edits, and never trusts client validation 
   const f = await fixture(t, { validate: async entries => { validated = true; assert.equal(entries.length, 0); return {}; } });
   const [a] = await f.create(1), cookie = await f.login(a);
   const draft = { customerName: "Parent", childName: "Jo", cardColor: "green", photoPermissionAccepted: true, photoPermissionVersion: "2026-11-18-v1", letters: Object.fromEntries(LETTERS.map(letter => [letter, { word: "ignored", isDefault: true }])) };
+  draft.childPhoto=f.title(a);
   assert.equal((await f.request(`/api/surveys/${a.id}`, { revision: 0, draft }, { method: "PUT", cookie })).status, 200);
   const submit = () => f.request(`/api/surveys/${a.id}/submit`, { revision: 1 }, { cookie });
   const responses = await Promise.all([submit(), submit()]);
@@ -150,6 +152,7 @@ test("submitting is idempotent, locks edits, and never trusts client validation 
 test("a custom word without an owned photo cannot be submitted even if the browser marks it valid", async t => {
   const f = await fixture(t), [a] = await f.create(1), cookie = await f.login(a);
   const draft = { customerName: "Parent", childName: "Jo", cardColor: "blue", photoPermissionAccepted: true, photoPermissionVersion: "2026-11-18-v1", letters: Object.fromEntries(LETTERS.map(letter => [letter, { word: "apple", isDefault: true }])) };
+  draft.childPhoto=f.title(a);
   draft.letters.A = { word: "apple", isDefault: false, status: "valid" };
   await f.request(`/api/surveys/${a.id}`, { revision: 0, draft }, { method: "PUT", cookie });
   assert.equal((await f.request(`/api/surveys/${a.id}/submit`, { revision: 1 }, { cookie })).status, 422);
@@ -183,6 +186,7 @@ test("server phonics rejection blocks an owned-photo submission despite a forged
   const photoId = randomUUID(), path = `surveys/${a.id}/G/${photoId}.jpg`;
   f.db.tables.survey_photos.push({ id: photoId, survey_id: a.id, letter: "G", storage_path: path, content_type: "image/jpeg" });
   const draft = { customerName: "Parent", childName: "Jo", cardColor: "blue", photoPermissionAccepted: true, photoPermissionVersion: "2026-11-18-v1", letters: Object.fromEntries(LETTERS.map(letter => [letter, { isDefault: true }])) };
+  draft.childPhoto=f.title(a);
   draft.letters.G = { word: "giraffe", isDefault: false, storagePath: path, status: "valid" };
   assert.equal((await f.request(`/api/surveys/${a.id}`, { revision: 0, draft }, { method: "PUT", cookie })).status, 200);
   const response = await f.request(`/api/surveys/${a.id}/submit`, { revision: 1 }, { cookie });
@@ -232,4 +236,21 @@ test("private links and admin photo access cannot recover a purging or erased se
   assert.equal((await f.request(`/api/surveys/${a.id}/photos/${randomUUID()}`,null,{admin:true})).status,410);
   assert.equal((await f.request(`/api/admin/surveys/${a.id}/link`,{},{admin:true})).status,410);
   assert.equal((await f.request(`/api/surveys/${a.id}`)).status,401);
+});
+
+test("a dedicated child photo is required, uploads privately and restores its framing on another device",async t=>{
+  const f=await fixture(t),[a,b]=await f.create(),cookie=await f.login(a);
+  const draft={customerName:"Parent",childName:"Alexandria-Josephine",cardColor:"blue",photoPermissionAccepted:true,photoPermissionVersion:"2026-11-18-v1",letters:Object.fromEntries(LETTERS.map(letter=>[letter,{isDefault:true}]))};
+  await f.request(`/api/surveys/${a.id}`,{revision:0,draft},{method:"PUT",cookie});
+  const missing=await f.request(`/api/surveys/${a.id}/submit`,{revision:1},{cookie});
+  assert.equal(missing.status,422);assert.match((await missing.json()).error,/child's photo/);assert.equal(f.db.tables.orders.length,0);
+  const form=new FormData();form.append("photo",new Blob([await readFile(new URL("../public/defaults/J.jpg",import.meta.url))],{type:"image/jpeg"}),"sample-child.jpg");
+  const uploaded=await fetch(`${f.base}/api/surveys/${a.id}/photos/TITLE`,{method:"POST",headers:{cookie},body:form});assert.equal(uploaded.status,200);
+  const photo=await uploaded.json();assert.match(photo.storagePath,new RegExp(`^surveys/${a.id}/TITLE/`));
+  draft.childPhoto={storagePath:photo.storagePath,photoUrl:"https://wrong.example",position:{x:20,y:75}};
+  assert.equal((await f.request(`/api/surveys/${a.id}`,{revision:1,draft},{method:"PUT",cookie})).status,200);
+  const restored=await(await f.request(`/api/surveys/${a.id}`,null,{cookie:await f.login(a)})).json();assert.equal(restored.draft.childPhoto.photoUrl,photo.url);assert.deepEqual(restored.draft.childPhoto.position,{x:20,y:75});
+  assert.equal((await f.request(photo.url,null,{cookie:await f.login(b)})).status,401);
+  assert.equal((await f.request(`/api/surveys/${a.id}/submit`,{revision:2},{cookie})).status,200);
+  assert.equal(f.db.tables.orders[0].child_photo_storage_path,photo.storagePath);assert.deepEqual(f.db.tables.orders[0].child_photo_position,{x:20,y:75});
 });

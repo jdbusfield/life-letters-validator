@@ -9,7 +9,8 @@ import { getValidationClient } from "../lib/openaiClient.js";
 import { generateOrderPDF } from "../lib/pdfGenerator.js";
 import { cardPersonalization } from "../lib/cardPersonalization.js";
 import { PHOTO_PERMISSION_VERSION, hasPhotoPermission, requirePhotoPermission, requirePersonalizationAvailable } from "../lib/photoPrivacy.js";
-import { PHOTO_BUCKET, LETTERS, cookiePath, hashToken, newToken, validToken, isId, fault, safeDraft, submissionEntries, makeSurveyRows, photoUrl } from "../lib/surveyData.js";
+import { PHOTO_BUCKET, LETTERS, TITLE_PHOTO_SLOT, normalizeChildPhoto, cookiePath, hashToken, newToken, validToken, isId, fault, safeDraft, submissionEntries, makeSurveyRows, photoUrl } from "../lib/surveyData.js";
+import { validateTitleName } from "../lib/titleCard.js";
 
 const cookieName = "ll_survey_access";
 function tokenFromCookie(req) {
@@ -55,7 +56,7 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
   }
   function editable(survey) { if (survey.status !== "draft") throw fault(409, "These cards have already been submitted. Contact Life Letters for changes."); }
   async function photosFor(id) {
-    const { data, error } = await db.from("survey_photos").select("id,letter,storage_path,content_type").eq("survey_id", id);
+    const { data, error } = await db.from("survey_photos").select("id,survey_id,letter,storage_path,content_type").eq("survey_id", id);
     if (error) throw error;
     return data || [];
   }
@@ -103,7 +104,7 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
   }, upload.single("photo"), route(async (req, res) => {
     const { survey } = req.surveyContext;
     const letter = req.params.letter.toUpperCase();
-    if (!LETTERS.includes(letter) || !req.file) throw fault(400, "A letter and photo are required");
+    if (![...LETTERS,TITLE_PHOTO_SLOT].includes(letter) || !req.file) throw fault(400, "A letter or title card and photo are required");
     const check = checkUploadedPhoto(req.file.buffer);
     if (!check.ok) throw fault(422, check.reason);
     if (!["png", "jpeg"].includes(check.info.format)) throw fault(422, "Please choose a JPG or PNG photo for printing");
@@ -141,6 +142,8 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
     if (!draft.customerName) throw fault(422, "Please enter your name");
     cardPersonalization(draft, true);
     requirePhotoPermission(survey);
+    normalizeChildPhoto(draft.childPhoto,survey,photos,true);
+    validateTitleName(draft.childName);
     const entries = submissionEntries(draft, photos);
     const results = await validate(entries.filter(e => !e.is_default).map(e => ({ letter: e.letter, word: e.word })));
     const invalid = entries.filter(e => !e.is_default && results[e.letter]?.valid !== true).map(e => e.letter);

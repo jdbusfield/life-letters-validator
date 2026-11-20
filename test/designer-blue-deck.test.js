@@ -24,12 +24,13 @@ test("portrait and landscape photos stay completely inside the window without cr
   }
 });
 
-test("a complete deck preserves page pairs and print boxes, adds words, corrects sounds and omits names",async()=>{
+test("a complete deck preserves page pairs and print boxes, adds words, corrected sounds and its required title card",async()=>{
   const src=await PDFDocument.create();for(let i=0;i<56;i++)src.addPage([324,414]).drawText(`ART ${i+1}`,{x:10,y:390,size:8});
   const photo=await readFile(new URL("../public/defaults/A.jpg",import.meta.url));
   const entries=Array.from({length:26},(_,i)=>({letter:String.fromCharCode(65+i),word:i===16?"queen":i===23?"fox":"apple",_imageData:{contentType:"image/jpeg",bytes:photo}}));
   const fontBytes=await readFile(new URL("../lib/fonts/Nunito-Variable.ttf",import.meta.url));
-  const bytes=await renderBlueDesignerDeck({templateBytes:await src.save(),entries:[...entries].reverse(),fontBytes,childName:"Never print this"});
+  const titleCard={name:"Mia",photoData:{bytes:photo,contentType:"image/jpeg"},position:{x:50,y:50}};
+  const bytes=await renderBlueDesignerDeck({templateBytes:await src.save(),entries:[...entries].reverse(),fontBytes,titleCard});
   const result=await PDFDocument.load(bytes);
   assert.equal(result.getPageCount(),56);
   for(const p of result.getPages()){
@@ -38,6 +39,7 @@ test("a complete deck preserves page pairs and print boxes, adds words, corrects
     assert.deepEqual(p.getBleedBox(),{x:0,y:0,width:324,height:414});
   }
   assert.equal(BLUE_TEMPLATE.trimWidth/72,4.25);
-  await assert.rejects(renderBlueDesignerDeck({templateBytes:await src.save(),entries:entries.slice(1),fontBytes}),/exactly one/);
-  await assert.rejects(renderBlueDesignerDeck({templateBytes:await src.save(),entries:entries.map(e=>({...e,_imageData:null})),fontBytes}),/photo is missing/);
+  await assert.rejects(renderBlueDesignerDeck({templateBytes:await src.save(),entries:entries.slice(1),fontBytes,titleCard}),/exactly one/);
+  await assert.rejects(renderBlueDesignerDeck({templateBytes:await src.save(),entries:entries.map(e=>({...e,_imageData:null})),fontBytes,titleCard}),/photo is missing/);
+  await assert.rejects(renderBlueDesignerDeck({templateBytes:await src.save(),entries,fontBytes}),/title-card photo is required/);
 });

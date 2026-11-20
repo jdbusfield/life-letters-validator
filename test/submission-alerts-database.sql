@@ -1,5 +1,14 @@
 -- Run after the migration; all test rows and temporary changes roll back.
 begin;
+
+-- Synthetic title-photo metadata only; this entire test transaction rolls back.
+create or replace function pg_temp.add_title_photo(sid uuid) returns void language plpgsql as $$
+declare pid uuid:=gen_random_uuid(); path text:='surveys/'||sid::text||'/TITLE/'||gen_random_uuid()::text||'.jpg';
+begin
+  insert into public.survey_photos(id,survey_id,letter,storage_path,content_type) values(pid,sid,'TITLE',path,'image/jpeg');
+  update public.surveys set draft=draft||jsonb_build_object('childPhoto',jsonb_build_object('storagePath',path,'position',jsonb_build_object('x',50,'y',50))) where id=sid;
+end $$;
+
 do $$
 declare s uuid:=gen_random_uuid(); token text:=repeat(replace(gen_random_uuid()::text,'-',''),2);
   response jsonb; entries jsonb; job public.survey_submission_alerts%rowtype; claimed public.survey_submission_alerts%rowtype;
@@ -12,6 +21,7 @@ begin
     has_function_privilege('anon','public.claim_life_letters_submission_alerts(text)','EXECUTE') then raise exception 'Notification queue exposed'; end if;
   insert into public.surveys(id,provisioning_key,customer_email,customer_name,order_reference,set_label,unit_index,access_token_hash,expires_at,draft)
     values(s,'alert-test:'||s,'parent@example.com','Test Parent','TEST-NOTIFICATION-ROLLBACK','Set 1',1,token,now()+interval '1 day','{"customerName":"Test Parent","childName":"Test child","cardColor":"pink","letters":{}}');
+  perform pg_temp.add_title_photo(s);
   select jsonb_agg(jsonb_build_object('letter',chr(i),'word','test','is_default',true,'validation_status','valid')) into entries from generate_series(65,90) i;
   response:=public.submit_life_letters_survey(s,0,token,entries);
   if (select count(*) from public.survey_submission_alerts)<>original_jobs+1 then raise exception 'Submission did not queue exactly one alert'; end if;

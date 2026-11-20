@@ -1,5 +1,14 @@
 -- Rollback-only fixtures. Synthetic storage metadata below never represents a real uploaded file.
 begin;
+
+-- Synthetic title-photo metadata only; this entire test transaction rolls back.
+create or replace function pg_temp.add_title_photo(sid uuid) returns void language plpgsql as $$
+declare pid uuid:=gen_random_uuid(); path text:='surveys/'||sid::text||'/TITLE/'||gen_random_uuid()::text||'.jpg';
+begin
+  insert into public.survey_photos(id,survey_id,letter,storage_path,content_type) values(pid,sid,'TITLE',path,'image/jpeg');
+  update public.surveys set draft=draft||jsonb_build_object('childPhoto',jsonb_build_object('storagePath',path,'position',jsonb_build_object('x',50,'y',50))) where id=sid;
+end $$;
+
 do $$
 declare sid uuid:=gen_random_uuid(); sid2 uuid:=gen_random_uuid(); oid uuid; oid2 uuid;
   token text:=repeat(replace(gen_random_uuid()::text,'-',''),2); entries jsonb; answer jsonb;
@@ -12,6 +21,8 @@ begin
   insert into public.surveys(id,provisioning_key,customer_email,customer_name,order_reference,set_label,unit_index,access_token_hash,expires_at,draft,photo_permission_at,photo_permission_version)
     values(sid,'retention-rollback:'||sid,'test@example.com','Test Parent','RETENTION-ROLLBACK','Set 1',1,token,now()+interval '1 day','{"childName":"Jo","cardColor":"pink","letters":{}}',now(),'2026-11-18-v1'),
     (sid2,'retention-rollback:'||sid2,'test@example.com','Test Parent','RETENTION-ROLLBACK','Set 2',2,repeat('b',64),now()+interval '1 day','{"childName":"Leo","cardColor":"blue","letters":{}}',now(),'2026-11-18-v1');
+  perform pg_temp.add_title_photo(sid);
+  perform pg_temp.add_title_photo(sid2);
   select jsonb_agg(jsonb_build_object('letter',chr(i),'word','default','is_default',true,'validation_status','skipped')) into entries from generate_series(65,90) i;
   answer:=public.submit_life_letters_survey(sid,0,token,entries);oid:=(answer->>'orderId')::uuid;
   answer:=public.submit_life_letters_survey(sid2,0,repeat('b',64),entries);oid2:=(answer->>'orderId')::uuid;
@@ -56,7 +67,7 @@ begin
   select * into job from public.claim_life_letters_retention();
   if not public.finish_life_letters_retention(sid,job.claim_token,null) then raise exception 'Erasure did not finalize'; end if;
   if exists(select 1 from public.survey_photos where survey_id=sid) or exists(select 1 from public.letter_entries where order_id=oid) then raise exception 'Personalization rows remain'; end if;
-  if not exists(select 1 from public.orders where id=oid and child_name is null and pdf_url is null and customer_email='test@example.com' and personalization_deleted_at is not null) then raise exception 'Order record was not preserved/minimized'; end if;
+  if not exists(select 1 from public.orders where id=oid and child_name is null and child_photo_storage_path is null and child_photo_url is null and child_photo_position is null and pdf_url is null and customer_email='test@example.com' and personalization_deleted_at is not null) then raise exception 'Order record was not preserved/minimized'; end if;
   if not exists(select 1 from public.surveys where id=sid and draft='{"letters":{}}' and personalization_deleted_at is not null and revoked_at is not null) then raise exception 'Survey content or private link was not cleared'; end if;
   if not exists(select 1 from storage.objects where name='surveys/'||sid2||'/A/unrelated-synthetic.jpg') or (select count(*) from public.letter_entries where order_id=oid2)<>26 then raise exception 'Another set was affected'; end if;
   if public.begin_life_letters_pdf(oid,0) is not null then raise exception 'Erased PDF could regenerate'; end if;

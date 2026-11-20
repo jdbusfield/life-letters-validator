@@ -35,6 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   buildCardColors();
   buildHelperSheet();
   buildGrid();
+  window.LifeLettersChildPhoto.init({getSession:()=>surveySession,isBlocked:()=>privateAccessBlocked,confirmPermission:confirmPhotoPermission,save:()=>{if(saveTimer)clearTimeout(saveTimer);saveProgress();},update:updateSubmitButton});
 
   try {
     surveySession = await window.LifeLettersSurvey.open();
@@ -61,10 +62,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (surveySession?.info?.status === "submitted") {
     privateAccessBlocked = true;
-    document.querySelectorAll(".letters-section input, .letters-section button, .order-card input, .photo-privacy-card input, #saveBtn, #defaultAllCheckbox, #validateAllBtn, #restoreStartOver").forEach(el => { el.disabled = true; });
+    document.querySelectorAll(".letters-section input, .letters-section button, .order-card input, .order-card button, .photo-privacy-card input, #saveBtn, #defaultAllCheckbox, #validateAllBtn, #restoreStartOver").forEach(el => { el.disabled = true; });
     surveySession.notice("Your Life Letters cards have been submitted. Contact us if you need to request a change.");
   }
 
+  window.LifeLettersChildPhoto.lock();
   // Event listeners
   document.getElementById("validateAllBtn").addEventListener("click", validateAll);
   document.getElementById("submitBtn").addEventListener("click", submitOrder);
@@ -798,6 +800,7 @@ function updateSubmitButton() {
     !email ||
     !document.getElementById("childName").value.trim() ||
     !selectedCardColor() ||
+    !window.LifeLettersChildPhoto.ready() ||
     !document.getElementById("photoPermission").checked;
 
   document.getElementById("submitBtn").disabled = blocked;
@@ -829,6 +832,9 @@ function updateSubmitButton() {
   } else if (!document.getElementById("photoPermission").checked) {
     hint.className = "submit-hint";
     hint.textContent = "Confirm the photo privacy checkbox above to submit.";
+  } else if (!window.LifeLettersChildPhoto.ready()) {
+    hint.className = "submit-hint";
+    hint.textContent = "Upload your child's photo for the title card above, and wait for it to finish saving.";
   } else if (pending.length > 0) {
     hint.className = "submit-hint";
     hint.textContent = `Ready — we'll double-check ${pending.length} unverified word${pending.length > 1 ? "s" : ""} when you submit.`;
@@ -843,6 +849,7 @@ function updateSubmitButton() {
 
 async function submitOrder() {
   if (privateAccessBlocked || !confirmPhotoPermission()) return;
+  if(!window.LifeLettersChildPhoto.ready()){showToast("Please upload your child's title-card photo first.");document.getElementById("chooseChildPhoto").focus();return;}
   const customerName = document.getElementById("customerName").value.trim();
   const customerEmail = document.getElementById("customerEmail").value.trim();
   const letterStyle = "lower";
@@ -1069,6 +1076,7 @@ function saveProgress() {
       photoPermissionAccepted: document.getElementById("photoPermission").checked,
       photoPermissionVersion: document.getElementById("photoPermission").dataset.permissionVersion,
       childName: document.getElementById("childName").value,
+      childPhoto: window.LifeLettersChildPhoto.value(),
       cardColor: selectedCardColor(),
       customerName: document.getElementById("customerName").value,
       customerEmail: document.getElementById("customerEmail").value,
@@ -1127,6 +1135,7 @@ function restoreProgress(cloudData = null) {
 
   document.getElementById("photoPermission").checked = data.photoPermissionAccepted === true && data.photoPermissionVersion === document.getElementById("photoPermission").dataset.permissionVersion;
   document.getElementById("childName").value = data.childName || "";
+  window.LifeLettersChildPhoto.restore(data.childPhoto);
   document.querySelectorAll('input[name="cardColor"]').forEach(input => { input.checked = input.value === data.cardColor; });
   updateCardColorSelection();
   if (data.customerName) document.getElementById("customerName").value = data.customerName;
@@ -1198,6 +1207,7 @@ function startOver() {
   if (surveySession?.active) {
     if (!confirm("Clear the words and photos in this set?")) return;
     for (const letter of Object.keys(state)) { clearLetterWord(letter); removePhoto(letter); }
+    window.LifeLettersChildPhoto.reset();
     saveProgress();
     return;
   }
