@@ -389,8 +389,8 @@ function handleDefaultAllToggle(e) {
     defaultAllAppliedTo = new Set();
     for (const l of letters) {
       const s = state[l];
-      const hasValidCustom = !s.isDefault && s.word && s.status === "valid";
-      if (!s.isDefault && !hasValidCustom) {
+      const hasCustomInput = !s.isDefault && (s.word || s.photoUrl || s.photo || s.storagePath);
+      if (!s.isDefault && !hasCustomInput) {
         toggleDefault(l);
         defaultAllAppliedTo.add(l);
       }
