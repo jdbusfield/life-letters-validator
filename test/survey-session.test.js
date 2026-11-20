@@ -88,3 +88,11 @@ test("different sets use different local backup keys", async () => {
   vm.runInContext('surveySession={active:true,id:"second-set"}', context);
   assert.notEqual(first, vm.runInContext("progressKey()", context));
 });
+
+test("a removed set clears only its own device backup",async()=>{
+  const f=fixture(()=>({ok:false,status:410,json:async()=>({error:"Personalization removed"})}));
+  const removed=[];f.context.localStorage={removeItem:key=>removed.push(key)};
+  const session=await f.open();
+  await assert.rejects(session.save({word:"apple"}),/removed/);
+  assert.deepEqual(removed,[`lifeLetters:survey:${id}`]);
+});

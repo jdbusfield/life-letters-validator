@@ -9,6 +9,10 @@ import apiRoutes from "./routes/api.js";
 import uploadRoutes from "./routes/upload.js";
 import adminRoutes from "./routes/admin.js";
 import surveyRoutes from "./routes/surveys.js";
+import shopifyWebhookRoutes, { createAutomationAdminRouter } from "./routes/shopify.js";
+import { startSurveyEmailWorker } from "./lib/surveyEmail.js";
+import { startSubmissionAlertWorker, createSubmissionAlertAdminRouter } from "./lib/submissionAlerts.js";
+import { startPhotoRetentionWorker, createRetentionAdminRouter } from "./lib/photoRetention.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -26,6 +30,8 @@ app.use((_req, res, next) => {
 });
 
 // Middleware
+// Shopify signatures must be verified against the exact bytes, before JSON parsing.
+app.use(shopifyWebhookRoutes);
 app.use(express.json());
 app.use(
   session({
@@ -49,6 +55,9 @@ app.use(apiRoutes);
 app.use(uploadRoutes);
 app.use(adminRoutes);
 app.use(surveyRoutes);
+app.use(createAutomationAdminRouter());
+app.use(createSubmissionAlertAdminRouter());
+app.use(createRetentionAdminRouter());
 
 // Multer error handler
 app.use((err, _req, res, next) => {
@@ -67,8 +76,14 @@ app.use((err, _req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3456;
-app.listen(PORT, () => {
+const stopWorkers = [];
+const httpServer = app.listen(PORT, () => {
   console.log(
     `\n  Life Letters running at http://localhost:${PORT}\n`
   );
+  stopWorkers.push(startSurveyEmailWorker(), startSubmissionAlertWorker(), startPhotoRetentionWorker());
+});
+process.once("SIGTERM", () => {
+  stopWorkers.forEach(stop => stop?.());
+  httpServer.close();
 });

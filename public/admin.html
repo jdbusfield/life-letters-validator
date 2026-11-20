@@ -33,7 +33,7 @@
 
       <section class="survey-admin" aria-labelledby="savedSurveysHeading">
         <h2 id="savedSurveysHeading">Saved customer surveys</h2>
-        <p>Create one private link per set for testing or a purchase you have verified. Shopify creation and automatic emails will be connected later.</p>
+        <p>Create manual private links for tests or purchases you have verified. Automatic Shopify orders and survey emails appear below when connected.</p>
         <form id="createSurveysForm" class="survey-admin-fields">
           <label>Customer name<input id="surveyCustomerName" maxlength="120" required></label>
           <label>Customer email<input id="surveyCustomerEmail" type="email" maxlength="254" required></label>
@@ -44,6 +44,27 @@
         <p id="surveyAdminNotice" role="status"></p>
         <div id="surveyLinks"></div>
         <div id="savedSurveysList"></div>
+      </section>
+
+      <section class="survey-admin" aria-labelledby="orderAutomationHeading">
+        <h2 id="orderAutomationHeading">Shopify orders &amp; survey emails</h2>
+        <p id="orderAutomationStatus" role="status">Checking connection…</p>
+        <div id="orderAutomationJobs"></div>
+      </section>
+
+      <section class="survey-admin" aria-labelledby="submissionAlertsHeading">
+        <h2 id="submissionAlertsHeading">Completed survey notifications</h2>
+        <p id="submissionAlertsStatus" role="status">Checking notification setup…</p>
+        <button class="btn btn-small" id="refreshSubmissionAlerts" type="button">Refresh notifications</button>
+        <div id="submissionAlertsJobs"></div>
+      </section>
+
+      <section class="survey-admin" aria-labelledby="photoRetentionHeading">
+        <h2 id="photoRetentionHeading">Photo privacy &amp; 90-day cleanup</h2>
+        <p>Mark a set Shipped only after the finished cards have shipped to the customer. Survey photos, personalized text, and PDFs are scheduled for removal 90 days later. Check Canva and downloaded working copies separately.</p>
+        <p id="photoRetentionStatus" role="status">Checking cleanup…</p>
+        <button class="btn btn-small" id="refreshPhotoRetention" type="button">Refresh cleanup</button>
+        <div id="photoRetentionJobs"></div>
       </section>
 
       <!-- Status Filters -->
@@ -95,5 +116,8 @@
 
   <script src="admin.js"></script>
   <script src="admin-surveys.js"></script>
+  <script src="admin-automation.js"></script>
+  <script src="admin-submissions.js"></script>
+  <script src="admin-retention.js"></script>
 </body>
 </html>

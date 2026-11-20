@@ -47,6 +47,10 @@
         row.className = "survey-admin-row";
         const description = document.createElement("span");
         description.textContent = `${survey.order_reference} · ${survey.set_label} · ${survey.customer_email} · ${survey.status}`;
+        if (survey.personalization_purging_at || survey.personalization_deleted_at) {
+          description.textContent = `${survey.order_reference} · Personalization removed · order record retained`;
+          row.append(description); container.append(row); continue;
+        }
         row.append(description, button("Replace private link", async () => {
           if (!confirm("Replace this private link? The previous link and device access will stop working.")) return;
           try { showLinks([await request(`/${survey.id}/link`, {})]); } catch (error) { notice(error.message); }

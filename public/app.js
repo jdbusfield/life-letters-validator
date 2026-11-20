@@ -8,6 +8,7 @@ let WORD_SUGGESTIONS = {};
 let LETTER_TIPS = {};
 let phonicsVersion = null;
 let DEFAULT_IMAGES = {};
+let CARD_COLORS = [];
 
 const state = {};
 let debounceTimers = {};
@@ -31,8 +32,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadLetterData();
 
   // Build UI
+  buildCardColors();
   buildHelperSheet();
   buildGrid();
+  window.LifeLettersChildPhoto.init({getSession:()=>surveySession,isBlocked:()=>privateAccessBlocked,confirmPermission:confirmPhotoPermission,save:()=>{if(saveTimer)clearTimeout(saveTimer);saveProgress();},update:updateSubmitButton});
 
   try {
     surveySession = await window.LifeLettersSurvey.open();
@@ -41,9 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       orderNumber = surveySession.info.orderReference;
       document.getElementById("customerEmail").value = surveySession.info.customerEmail;
       document.getElementById("customerEmail").readOnly = true;
-      document.getElementById("surveySetField").hidden = false;
       document.getElementById("surveySetLabel").value = surveySession.info.setLabel;
-      document.getElementById("surveySetLabel").addEventListener("input", onFieldChange);
       document.getElementById("surveyInfo").textContent = `Order ${orderNumber} · ${surveySession.info.setLabel}`;
       document.getElementById("surveyInfo").hidden = false;
       document.querySelector(".photo-help-note").textContent = "Your progress saves online automatically. Reopen your private email link on any device to continue.";
@@ -61,10 +62,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (surveySession?.info?.status === "submitted") {
     privateAccessBlocked = true;
-    document.querySelectorAll(".letters-section input, .letters-section button, .order-card input, #saveBtn, #defaultAllCheckbox, #validateAllBtn, #restoreStartOver").forEach(el => { el.disabled = true; });
+    document.querySelectorAll(".letters-section input, .letters-section button, .order-card input, .order-card button, .photo-privacy-card input, #saveBtn, #defaultAllCheckbox, #validateAllBtn, #restoreStartOver").forEach(el => { el.disabled = true; });
     surveySession.notice("Your Life Letters cards have been submitted. Contact us if you need to request a change.");
   }
 
+  window.LifeLettersChildPhoto.lock();
   // Event listeners
   document.getElementById("validateAllBtn").addEventListener("click", validateAll);
   document.getElementById("submitBtn").addEventListener("click", submitOrder);
@@ -83,6 +85,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("restoreStartOver").addEventListener("click", startOver);
 
   // Keep order fields, submit gating, and autosave in sync.
+  document.getElementById("photoPermission").addEventListener("change", onFieldChange);
+  document.getElementById("childName").addEventListener("input", onFieldChange);
   document.getElementById("customerName").addEventListener("input", onFieldChange);
   document.getElementById("customerEmail").addEventListener("input", onFieldChange);
 
@@ -115,6 +119,7 @@ async function loadLetterData() {
     LETTER_TIPS = data.letterTips || {};
     phonicsVersion = data.phonicsVersion;
     DEFAULT_IMAGES = data.defaultImages || {};
+    CARD_COLORS = data.cardColors || [];
     dataLoaded = true;
   } catch (err) {
     console.error("Failed to load letter data:", err);
@@ -126,6 +131,30 @@ async function loadLetterData() {
       WORD_SUGGESTIONS[l] = [];
     });
   }
+}
+
+function selectedCardColor() {
+  return document.querySelector('input[name="cardColor"]:checked')?.value || "";
+}
+
+function updateCardColorSelection() {
+  const color = CARD_COLORS.find(option => option.id === selectedCardColor());
+  document.getElementById("cardColorSelection").textContent = color ? `${color.name} selected for this set.` : "Choose a color above.";
+}
+
+function buildCardColors() {
+  document.getElementById("cardColorOptions").innerHTML = CARD_COLORS.map(color => `
+    <label class="card-color-option">
+      <input type="radio" name="cardColor" value="${escapeSurveyText(color.id)}" required>
+      <span class="card-color-choice">
+        <span class="card-color-swatch" style="--card-swatch:${escapeSurveyText(color.hex)}" aria-hidden="true"><span class="color-check">✓</span></span>
+        <span>${escapeSurveyText(color.name)}</span>
+      </span>
+    </label>`).join("");
+  document.querySelectorAll('input[name="cardColor"]').forEach(input => input.addEventListener("change", () => {
+    updateCardColorSelection();
+    onFieldChange();
+  }));
 }
 
 function displayLetter(letter) {
@@ -362,8 +391,8 @@ function handleDefaultAllToggle(e) {
     defaultAllAppliedTo = new Set();
     for (const l of letters) {
       const s = state[l];
-      const hasValidCustom = !s.isDefault && s.word && s.status === "valid";
-      if (!s.isDefault && !hasValidCustom) {
+      const hasCustomInput = !s.isDefault && (s.word || s.photoUrl || s.photo || s.storagePath);
+      if (!s.isDefault && !hasCustomInput) {
         toggleDefault(l);
         defaultAllAppliedTo.add(l);
       }
@@ -497,7 +526,15 @@ function handleDrop(e) {
   }
 }
 
+function confirmPhotoPermission() {
+  if (document.getElementById("photoPermission").checked) return true;
+  showToast("Please confirm the photo privacy checkbox before uploading or submitting.");
+  document.getElementById("photoPermission").focus();
+  return false;
+}
+
 function processPhoto(letter, file) {
+  if (!confirmPhotoPermission()) return;
   if (file.size > 10 * 1024 * 1024) {
     setPhotoStatus(letter, "error", "File too large (max 10 MB)");
     return;
@@ -529,12 +566,18 @@ function removePhoto(letter) {
 
 async function uploadPhoto(letter, file) {
   if (privateAccessBlocked) { setPhotoStatus(letter, "error", "Open your private survey link to add photos."); return; }
+  if (!confirmPhotoPermission()) return;
   setPhotoStatus(letter, "uploading", "Uploading...");
 
   const formData = new FormData();
   formData.append("photo", file);
 
   try {
+    if (surveySession?.active) {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveProgress();
+      await surveySession.flush();
+    }
     const endpoint = surveySession?.active ? `${surveySession.path}/photos/${letter}` : `/api/upload/${letter}?order=${encodeURIComponent(orderNumber || "unassigned")}`;
     const res = await fetch(endpoint, {
       method: "POST",
@@ -754,7 +797,11 @@ function updateSubmitButton() {
     validating.length > 0 ||
     empty.length > 0 ||
     !name ||
-    !email;
+    !email ||
+    !document.getElementById("childName").value.trim() ||
+    !selectedCardColor() ||
+    !window.LifeLettersChildPhoto.ready() ||
+    !document.getElementById("photoPermission").checked;
 
   document.getElementById("submitBtn").disabled = blocked;
   const previewSubmit = document.getElementById("previewSubmit");
@@ -779,6 +826,15 @@ function updateSubmitButton() {
   } else if (!name || !email) {
     hint.className = "submit-hint";
     hint.textContent = "Add your name and email above to submit.";
+  } else if (!document.getElementById("childName").value.trim() || !selectedCardColor()) {
+    hint.className = "submit-hint";
+    hint.textContent = "Add your child’s name and choose a card color above to submit.";
+  } else if (!document.getElementById("photoPermission").checked) {
+    hint.className = "submit-hint";
+    hint.textContent = "Confirm the photo privacy checkbox above to submit.";
+  } else if (!window.LifeLettersChildPhoto.ready()) {
+    hint.className = "submit-hint";
+    hint.textContent = "Upload your child's photo for the title card above, and wait for it to finish saving.";
   } else if (pending.length > 0) {
     hint.className = "submit-hint";
     hint.textContent = `Ready — we'll double-check ${pending.length} unverified word${pending.length > 1 ? "s" : ""} when you submit.`;
@@ -792,10 +848,19 @@ function updateSubmitButton() {
 }
 
 async function submitOrder() {
-  if (privateAccessBlocked) return;
+  if (privateAccessBlocked || !confirmPhotoPermission()) return;
+  if(!window.LifeLettersChildPhoto.ready()){showToast("Please upload your child's title-card photo first.");document.getElementById("chooseChildPhoto").focus();return;}
   const customerName = document.getElementById("customerName").value.trim();
   const customerEmail = document.getElementById("customerEmail").value.trim();
   const letterStyle = "lower";
+  const childName = document.getElementById("childName").value;
+  const cardColor = selectedCardColor();
+  if (!childName.trim() || !cardColor) {
+    alert("Please enter your child’s name and choose a card color.");
+    document.getElementById(!childName.trim() ? "childName" : "cardColorOptions").scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!childName.trim()) document.getElementById("childName").focus();
+    return;
+  }
 
   // Validation
   if (!customerEmail) {
@@ -872,6 +937,8 @@ async function submitOrder() {
         customerEmail,
         customerName,
         letterStyle,
+        childName,
+        cardColor,
         entries,
       }),
     });
@@ -891,6 +958,7 @@ async function submitOrder() {
     document.getElementById("confirmationSection").style.display = "block";
 
     // Hide the form sections
+    document.querySelector(".photo-privacy-card").style.display = "none";
     document.querySelector(".order-card").style.display = "none";
     document.querySelector(".photo-help-card").style.display = "none";
     document.querySelector(".letters-section").style.display = "none";
@@ -1005,6 +1073,11 @@ function saveProgress() {
     const data = {
       savedAt: new Date().toISOString(),
       orderNumber,
+      photoPermissionAccepted: document.getElementById("photoPermission").checked,
+      photoPermissionVersion: document.getElementById("photoPermission").dataset.permissionVersion,
+      childName: document.getElementById("childName").value,
+      childPhoto: window.LifeLettersChildPhoto.value(),
+      cardColor: selectedCardColor(),
       customerName: document.getElementById("customerName").value,
       customerEmail: document.getElementById("customerEmail").value,
       letterStyle: "lower",
@@ -1027,7 +1100,7 @@ function saveProgress() {
         feedback: s.feedback || "",
       };
     }
-    if (!hasContent && !data.customerName && !data.customerEmail) {
+    if (!hasContent && !data.customerName && !data.customerEmail && !data.childName && !data.cardColor) {
       localStorage.removeItem(progressKey());
       if (!surveySession?.active) return;
     }
@@ -1060,6 +1133,11 @@ function restoreProgress(cloudData = null) {
 
   restoring = true;
 
+  document.getElementById("photoPermission").checked = data.photoPermissionAccepted === true && data.photoPermissionVersion === document.getElementById("photoPermission").dataset.permissionVersion;
+  document.getElementById("childName").value = data.childName || "";
+  window.LifeLettersChildPhoto.restore(data.childPhoto);
+  document.querySelectorAll('input[name="cardColor"]').forEach(input => { input.checked = input.value === data.cardColor; });
+  updateCardColorSelection();
   if (data.customerName) document.getElementById("customerName").value = data.customerName;
   if (data.customerEmail) document.getElementById("customerEmail").value = data.customerEmail;
   if (data.orderNumber) orderNumber = data.orderNumber;
@@ -1129,6 +1207,7 @@ function startOver() {
   if (surveySession?.active) {
     if (!confirm("Clear the words and photos in this set?")) return;
     for (const letter of Object.keys(state)) { clearLetterWord(letter); removePhoto(letter); }
+    window.LifeLettersChildPhoto.reset();
     saveProgress();
     return;
   }

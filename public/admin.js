@@ -75,6 +75,9 @@ function showDashboard() {
   document.getElementById("dashboard").style.display = "block";
   loadOrders();
   window.loadSavedSurveys?.();
+  window.loadOrderAutomation?.();
+  window.loadSubmissionAlerts?.();
+  window.loadPhotoRetention?.();
 }
 
 // ---- Orders ----
@@ -185,8 +188,11 @@ function renderOrderDetail(order, entries, defaultImages = {}) {
       <div><strong>Customer:</strong> ${esc(order.customer_name || "—")}</div>
       <div><strong>Email:</strong> ${esc(order.customer_email)}</div>
       <div><strong>Style:</strong> ${esc(order.letter_style)}</div>
+      <div><strong>Child’s title-card name:</strong> ${esc(order.child_name || (order.personalization_deleted_at ? "Removed under the retention process" : "Not provided on this earlier set"))}</div>
+      <div><strong>Card color:</strong> ${esc(order.card_color ? order.card_color[0].toUpperCase() + order.card_color.slice(1) : order.personalization_deleted_at ? "Personalization removed" : "Not selected on this earlier set")}</div>
       <div><strong>Status:</strong> <span class="status-badge status-${order.status}">${formatStatus(order.status)}</span></div>
       <div><strong>Created:</strong> ${formatDate(order.created_at)}</div>
+      ${order.shipped_at ? `<div><strong>Shipped to customer:</strong> ${formatDate(order.shipped_at)}</div>` : ""}
     </div>
     <div class="detail-actions">
       ${
@@ -201,7 +207,7 @@ function renderOrderDetail(order, entries, defaultImages = {}) {
           ? `<a class="btn btn-small btn-pdf" href="/api/admin/orders/${encodeURIComponent(order.id)}/pdf" download>⬇ Download PDF</a>`
           : '<span class="no-pdf-label">PDF not generated</span>'
       }
-      <button class="btn btn-small" onclick="regeneratePDF('${order.id}')">🔄 Regenerate PDF</button>
+      ${order.personalization_deleted_at ? `<span>Personalization removed: ${formatDate(order.personalization_deleted_at)}</span>` : `<button class="btn btn-small" onclick="regeneratePDF('${order.id}')">🔄 Regenerate PDF</button>`}
     </div>
     ${
       order.pdf_url
@@ -238,6 +244,7 @@ function renderOrderDetail(order, entries, defaultImages = {}) {
 }
 
 async function updateStatus(orderId, newStatus) {
+  if (newStatus === "shipped" && !confirm("Have the finished cards shipped to the customer? Marking Shipped records today’s shipment date and starts the 90-day personalization-file retention period.")) return;
   try {
     const res = await fetch(`/api/admin/orders/${orderId}/status`, {
       method: "PATCH",
@@ -250,6 +257,7 @@ async function updateStatus(orderId, newStatus) {
     // Refresh detail and list
     await viewOrder(orderId);
     loadOrders();
+    window.loadPhotoRetention?.();
   } catch (err) {
     console.error("Update status error:", err);
     alert("Failed to update order status.");

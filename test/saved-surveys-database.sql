@@ -1,5 +1,14 @@
 -- Run in the Supabase SQL editor after the migration. All sample records roll back.
 begin;
+
+-- Synthetic title-photo metadata only; this entire test transaction rolls back.
+create or replace function pg_temp.add_title_photo(sid uuid) returns void language plpgsql as $$
+declare pid uuid:=gen_random_uuid(); path text:='surveys/'||sid::text||'/TITLE/'||gen_random_uuid()::text||'.jpg';
+begin
+  insert into public.survey_photos(id,survey_id,letter,storage_path,content_type) values(pid,sid,'TITLE',path,'image/jpeg');
+  update public.surveys set draft=draft||jsonb_build_object('childPhoto',jsonb_build_object('storagePath',path,'position',jsonb_build_object('x',50,'y',50))) where id=sid;
+end $$;
+
 do $$
 declare sid uuid:=gen_random_uuid(); sid2 uuid:=gen_random_uuid(); original_orders bigint;
   original_entries bigint; entries jsonb; result jsonb; order_id uuid;
@@ -11,8 +20,10 @@ begin
   if exists(select 1 from storage.buckets where id in ('survey-photos','survey-pdfs') and public) then raise exception 'Survey buckets must be private'; end if;
   if (select count(*) from pg_class where oid in ('public.surveys'::regclass,'public.survey_photos'::regclass) and relrowsecurity)<>2 then raise exception 'RLS must be enabled'; end if;
   insert into public.surveys(id,provisioning_key,customer_email,customer_name,order_reference,set_label,unit_index,access_token_hash,expires_at,draft)
-  values(sid,'rollback-test:'||sid,'database-test@example.com','Test parent','ROLLBACK-TEST','Set 1',1,repeat('a',64),now()+interval '1 day','{"customerName":"Test parent","letters":{}}'),
-        (sid2,'rollback-test:'||sid2,'database-test@example.com','Test parent','ROLLBACK-TEST','Set 2',2,repeat('b',64),now()+interval '1 day','{"customerName":"Test parent","letters":{}}');
+  values(sid,'rollback-test:'||sid,'database-test@example.com','Test parent','ROLLBACK-TEST','Set 1',1,repeat('a',64),now()+interval '1 day','{"customerName":"Test parent","childName":"Test child","cardColor":"blue","letters":{}}'),
+        (sid2,'rollback-test:'||sid2,'database-test@example.com','Test parent','ROLLBACK-TEST','Set 2',2,repeat('b',64),now()+interval '1 day','{"customerName":"Test parent","childName":"Test child","cardColor":"blue","letters":{}}');
+  perform pg_temp.add_title_photo(sid);
+  perform pg_temp.add_title_photo(sid2);
   select jsonb_agg(jsonb_build_object('letter',chr(i),'word','default','is_default',true,'photo_url',null,'photo_storage_path',null,'validation_status','skipped')) into entries from generate_series(65,90) i;
   begin
     perform public.submit_life_letters_survey(sid,0,repeat('b',64),entries);
