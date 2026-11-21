@@ -4,12 +4,15 @@ import {readFile} from "node:fs/promises";
 import {PDFDocument} from "pdf-lib";
 import {BLUE_TEMPLATE,bluePilotRequested,verifyBlueTemplate,photoFitPlacement,renderBlueDesignerDeck} from "../lib/designerBlueDeck.js";
 
-test("the designer renderer is limited to explicitly selected private test surveys",()=>{
+test("the final blue renderer covers saved blue lowercase sets and keeps other colors unchanged",()=>{
   const env={DESIGNER_BLUE_TEST_SURVEY_IDS:"test-one,test-two"};
   assert.equal(bluePilotRequested({survey_id:"test-one"},env),true);
   assert.equal(bluePilotRequested({survey_id:"real-customer"},env),false);
   assert.equal(bluePilotRequested({survey_id:"test-one"},{}),false);
   assert.equal(bluePilotRequested({},env),false);
+  assert.equal(bluePilotRequested({survey_id:"new-blue-set",card_color:"blue",letter_style:"lower"},{}),true);
+  assert.equal(bluePilotRequested({survey_id:"pink-set",card_color:"pink",letter_style:"lower"},{}),false);
+  assert.equal(bluePilotRequested({card_color:"blue",letter_style:"lower"},{}),false);
   assert.throws(()=>verifyBlueTemplate(Buffer.from("replaced template")),/has changed/);
 });
 
