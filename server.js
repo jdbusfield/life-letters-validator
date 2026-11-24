@@ -8,6 +8,7 @@ import multer from "multer";
 import apiRoutes from "./routes/api.js";
 import uploadRoutes from "./routes/upload.js";
 import adminRoutes from "./routes/admin.js";
+import {legacyExporterRetirement} from "./lib/legacyExporterRetirement.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -35,6 +36,9 @@ app.use(
     },
   })
 );
+
+// Retire the earlier exporter before any static admin page or API handler.
+app.use(legacyExporterRetirement);
 
 // Static files
 app.use(express.static(join(__dirname, "public")));
