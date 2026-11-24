@@ -18,3 +18,11 @@ collection, AI training/testing, voice cloning, or claims of ownership or
 endorsement. Consult the linked license for the complete terms. Other project
 licensing does not replace the audio license. The survey footer provides the
 required source credit.
+
+November 24, 2026 revision: rebuilt a, e, i, l, n, o, qu, r, u, v, w, x, y,
+and z from the source MP3 recordings. Each keeps one complete utterance.
+Pitch-preserving tempo edits shorten sustained sounds and lengthen the w glide;
+short fades and volume normalization improve playback. Vowels follow apple,
+egg, insect, octopus, and umbrella. The qu and x edits retain the complete
+/kw/ and /ks/ sequences. The player uses an updated asset version to avoid
+replaying a cached earlier clip.

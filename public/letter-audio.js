@@ -24,7 +24,7 @@ export function createLetterSoundPlayer(audio, onStateChange = () => {}) {
     const id = ++requestId;
     currentLetter = key;
     const file = key === "Q" ? "qu" : key.toLowerCase();
-    audio.src = `/audio/phonemes/${file}.wav`;
+    audio.src = `/audio/phonemes/${file}.wav?v=20261124`;
     onStateChange(key, "loading");
 
     try {

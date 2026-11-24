@@ -20,6 +20,16 @@ let privateAccessBlocked = false;
 let initializingSurvey = true;
 let restoredLocalChanges = false;
 const SUBMIT_LABEL = '<span class="btn-icon">&#128230;</span> Submit My Life Letters Cards';
+let submitInFlight = false;
+
+function confirmCardSubmission() {
+  const dialog=document.getElementById('submitConfirmation');
+  dialog.returnValue='cancel';
+  return new Promise(resolve=>{
+    dialog.addEventListener('close',()=>resolve(dialog.returnValue==='submit'),{once:true});
+    dialog.showModal();
+  });
+}
 
 // ---- Init ----
 
@@ -848,6 +858,12 @@ function updateSubmitButton() {
 }
 
 async function submitOrder() {
+  if(submitInFlight)return;
+  submitInFlight=true;
+  try { await submitOrderOnce(); } finally { submitInFlight=false; }
+}
+
+async function submitOrderOnce() {
   if (privateAccessBlocked || !confirmPhotoPermission()) return;
   if(!window.LifeLettersChildPhoto.ready()){showToast("Please upload your child's title-card photo first.");document.getElementById("chooseChildPhoto").focus();return;}
   const customerName = document.getElementById("customerName").value.trim();
@@ -903,6 +919,8 @@ async function submitOrder() {
     alert(msg);
     return;
   }
+
+  if(!await confirmCardSubmission())return;
 
   // Build entries
   const entries = letters.map((letter) => ({
