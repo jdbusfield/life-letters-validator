@@ -3,6 +3,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import supabase from "../lib/supabase.js";
 import { regenerateOrderPDF, readOrderPDF } from "../lib/pdfGenerator.js";
+import {enqueuePrivatePDF} from '../lib/pdfQueue.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -166,6 +167,16 @@ router.get("/api/admin/export/:orderId", requireAdmin, async (req, res) => {
       return res.status(503).json({ error: "Database not configured" });
     }
 
+    const {data:savedSet}=await supabase.from('orders').select('*').eq('id',req.params.orderId).single();
+    if(savedSet?.survey_id){
+      if(!savedSet.pdf_url){
+        const job=await enqueuePrivatePDF(savedSet);
+        return res.status(202).json({queued:true,state:job.state,message:'PDF queued. Check PDF preparation in admin.'});
+      }
+      res.set('Content-Type','application/pdf').set('Cache-Control','private, no-store');
+      res.set('Content-Disposition',`attachment; filename="life-letters-order-${savedSet.order_number}.pdf"`);
+      return res.send(await readOrderPDF(savedSet));
+    }
     const pdfUrl = await regenerateOrderPDF(req.params.orderId);
     if (!pdfUrl) {
       return res.status(500).json({ error: "PDF generation failed" });
@@ -227,6 +238,11 @@ router.post(
   requireAdmin,
   async (req, res) => {
     try {
+      const {data:savedSet}=await supabase.from('orders').select('*').eq('id',req.params.orderId).single();
+      if(savedSet?.survey_id){
+        const job=await enqueuePrivatePDF(savedSet,{force:true});
+        return res.status(202).json({queued:true,state:job.state,message:'PDF queued. You may continue working; its status appears in PDF preparation.'});
+      }
       const pdfUrl = await regenerateOrderPDF(req.params.orderId);
       if (!pdfUrl) {
         return res.status(500).json({ error: "PDF generation failed" });

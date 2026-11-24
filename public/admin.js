@@ -265,7 +265,16 @@ async function updateStatus(orderId, newStatus) {
 }
 
 async function exportOrder(orderId) {
-  window.open(`/api/admin/export/${orderId}`, "_blank");
+  const response=await fetch(`/api/admin/orders/${orderId}`);
+  if(!response.ok){alert('Could not read this order. Please refresh.');return;}
+  const {order}=await response.json();
+  if(order.survey_id && !order.pdf_url){
+    const queued=await fetch(`/api/admin/orders/${orderId}/regenerate-pdf`,{method:'POST'});
+    const result=await queued.json();
+    alert(queued.ok?'PDF queued. Check PDF preparation for its status.':result.error||'Could not queue PDF.');
+    window.loadPdfJobs?.();return;
+  }
+  window.location.assign(`/api/admin/export/${orderId}`);
 }
 
 async function downloadPDF(orderId) {
@@ -286,10 +295,12 @@ async function regeneratePDF(orderId) {
       throw new Error(data.error || "Failed to regenerate PDF");
     }
 
+    const result=await res.json();
     // Refresh the detail view and orders list
     await viewOrder(orderId);
     loadOrders();
-    alert("PDF regenerated successfully!");
+    window.loadPdfJobs?.();
+    alert(result.queued?result.message:'PDF regenerated successfully!');
   } catch (err) {
     console.error("Regenerate PDF error:", err);
     alert("Failed to regenerate PDF: " + err.message);
