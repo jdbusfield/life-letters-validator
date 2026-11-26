@@ -4,6 +4,7 @@ import { once } from "node:events";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import express from "express";
+import sharp from 'sharp';
 import { createSurveyRouter } from "../routes/surveys.js";
 import { hashToken, makeSurveyRows, safeDraft, LETTERS } from "../lib/surveyData.js";
 import { memoryDatabase } from "./survey-fixture.js";
@@ -35,6 +36,30 @@ async function fixture(t, options = {}) {
   const title = item => {const id=randomUUID(),path=`surveys/${item.id}/TITLE/${id}.jpg`;db.tables.survey_photos.push({id,survey_id:item.id,letter:"TITLE",storage_path:path,content_type:"image/jpeg"});return {storagePath:path,position:{x:25,y:65}};};
   return { db, base, request, create, login, title };
 }
+
+test('low-resolution letter and title photos upload with warnings and survive saved-draft reload on another session',async t=>{
+ const f=await fixture(t),[survey]=await f.create(1),cookie=await f.login(survey);
+ const draft={customerName:'Parent',childName:'Jo',cardColor:'blue',photoPermissionAccepted:true,photoPermissionVersion:'2026-11-18-v1',letters:{}};
+ assert.equal((await f.request(`/api/surveys/${survey.id}`,{revision:0,draft},{method:'PUT',cookie})).status,200);
+ const image=await sharp({create:{width:286,height:278,channels:3,background:'#95c6ea'}}).jpeg().toBuffer();
+ for(const slot of ['C','TITLE']){
+  const form=new FormData();form.append('photo',new Blob([image],{type:'image/jpeg'}),'small-phone-photo.jpg');
+  const response=await fetch(`${f.base}/api/surveys/${survey.id}/photos/${slot}`,{method:'POST',headers:{cookie},body:form});
+  const photo=await response.json();assert.equal(response.status,200,JSON.stringify(photo));assert.match(photo.warning,/low resolution/);
+  if(slot==='TITLE')draft.childPhoto={storagePath:photo.storagePath,photoUrl:photo.url,position:{x:50,y:50},warning:photo.warning};
+  else draft.letters.C={word:'cat',isDefault:false,storagePath:photo.storagePath,photoUrl:photo.url,photoWarning:photo.warning,status:'valid'};
+ }
+ assert.equal((await f.request(`/api/surveys/${survey.id}`,{revision:1,draft},{method:'PUT',cookie})).status,200);
+ const secondCookie=await f.login(survey);
+ const loaded=await(await f.request(`/api/surveys/${survey.id}`,null,{cookie:secondCookie})).json();
+ assert.equal(loaded.draft.letters.C.word,'cat');assert.equal(loaded.draft.letters.C.storagePath,draft.letters.C.storagePath);
+ assert.match(loaded.draft.letters.C.photoWarning,/low resolution/);assert.match(loaded.draft.childPhoto.warning,/low resolution/);
+ for(const url of [loaded.draft.letters.C.photoUrl,loaded.draft.childPhoto.photoUrl]){
+  const response=await f.request(url,null,{cookie:secondCookie});assert.equal(response.status,200);assert.deepEqual(Buffer.from(await response.arrayBuffer()),image);
+ }
+ const bad=new FormData();bad.append('photo',new Blob([image.subarray(0,40)],{type:'image/jpeg'}),'broken.jpg');
+ assert.equal((await fetch(`${f.base}/api/surveys/${survey.id}/photos/C`,{method:'POST',headers:{cookie},body:bad})).status,422);
+});
 
 test("one purchase of two sets creates isolated random private links; plaintext tokens are not stored", () => {
   const items = makeSurveyRows({ customerEmail: "parent@example.com", customerName: "Parent", orderReference: "#1001", setCount: 2, requestId: randomUUID() }, "https://survey.example.com");

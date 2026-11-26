@@ -21,6 +21,7 @@ let initializingSurvey = true;
 let restoredLocalChanges = false;
 const SUBMIT_LABEL = '<span class="btn-icon">&#128230;</span> Submit My Life Letters Cards';
 let submitInFlight = false;
+if(typeof window!=='undefined')window.onLifeLettersPhotoSettled=()=>updateSubmitButton();
 
 function confirmCardSubmission() {
   const dialog=document.getElementById('submitConfirmation');
@@ -45,7 +46,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   buildCardColors();
   buildHelperSheet();
   buildGrid();
-  window.LifeLettersChildPhoto.init({getSession:()=>surveySession,isBlocked:()=>privateAccessBlocked,confirmPermission:confirmPhotoPermission,save:()=>{if(saveTimer)clearTimeout(saveTimer);saveProgress();},update:updateSubmitButton});
+  window.LifeLettersChildPhoto.init({getSession:()=>surveySession,isBlocked:()=>privateAccessBlocked,confirmPermission:confirmPhotoPermission,save:()=>{if(saveTimer)clearTimeout(saveTimer);return saveProgress();},update:updateSubmitButton});
 
   try {
     surveySession = await window.LifeLettersSurvey.open();
@@ -369,6 +370,8 @@ function handleGridClick(e) {
 // ---- Default Toggle ----
 
 function toggleDefault(letter) {
+  if(window.LifeLettersPhotoSaves?.busy(letter)){showToast('Please wait for this photo to finish saving.');return;}
+  window.LifeLettersPhotoSaves?.clear(letter);
   const isDefault = !state[letter].isDefault;
   state[letter].isDefault = isDefault;
 
@@ -544,16 +547,18 @@ function confirmPhotoPermission() {
 }
 
 function processPhoto(letter, file) {
+  if(window.LifeLettersPhotoSaves?.busy(letter)){showToast('Please wait for this photo to finish saving.');return;}
+  if(privateAccessBlocked){setPhotoStatus(letter,'error','Open your private survey link to add photos.');return;}
   if (!confirmPhotoPermission()) return;
   if (file.size > 10 * 1024 * 1024) {
+    window.LifeLettersPhotoSaves.fail(letter);
     setPhotoStatus(letter, "error", "File too large (max 10 MB)");
     return;
   }
 
-  const reader = new FileReader();
-  reader.onload = (e) => showPhotoPreview(letter, e.target.result);
-  reader.readAsDataURL(file);
-  uploadPhoto(letter, file);
+  const previewUrl=URL.createObjectURL(file);
+  showPhotoPreview(letter,previewUrl);
+  window.LifeLettersPhotoSaves.run(letter,()=>uploadPhoto(letter,file)).finally(()=>URL.revokeObjectURL(previewUrl));
 }
 
 function showPhotoPreview(letter, dataUrl) {
@@ -564,12 +569,15 @@ function showPhotoPreview(letter, dataUrl) {
 }
 
 function removePhoto(letter) {
+  if(window.LifeLettersPhotoSaves?.busy(letter)){showToast('Please wait for this photo to finish saving.');return;}
+  window.LifeLettersPhotoSaves?.clear(letter);
   document.getElementById(`placeholder-${letter}`).style.display = "flex";
   document.getElementById(`preview-wrap-${letter}`).style.display = "none";
   document.getElementById(`file-${letter}`).value = "";
   state[letter].photo = null;
   state[letter].photoUrl = null;
   state[letter].storagePath = null;
+  state[letter].photoWarning = '';
   setPhotoStatus(letter, "", "");
   updateSubmitButton();
 }
@@ -600,18 +608,30 @@ async function uploadPhoto(letter, file) {
     }
 
     const result = await res.json();
+    if(!result.storagePath || !result.url)throw Error('This photo could not be stored. Please keep this tab open and try again.');
     state[letter].photo = true;
     state[letter].photoUrl = result.url;
     state[letter].storagePath = result.storagePath;
+    state[letter].photoWarning=result.warning||'';
+    showPhotoPreview(letter,result.url);
 
     const sizeMB = (result.size / (1024 * 1024)).toFixed(1);
-    setPhotoStatus(letter, "success", `Uploaded (${sizeMB} MB)`);
+    setPhotoStatus(letter,'uploading','Saving photo…');
+    try{
+      await saveProgress();
+      setPhotoStatus(letter,result.warning?'warning':'success',result.warning||`Saved online (${sizeMB} MB)`);
+    }catch{setPhotoStatus(letter,'error','Photo uploaded. Save again before leaving this page.');}
+    return true;
   } catch (err) {
     console.error("Upload error:", err);
+    // A local thumbnail is not evidence that the file was uploaded.
+    if(state[letter].photoUrl)showPhotoPreview(letter,state[letter].photoUrl);
+    else {document.getElementById(`placeholder-${letter}`).style.display='flex';document.getElementById(`preview-wrap-${letter}`).style.display='none';}
     setPhotoStatus(letter, "error", err.message || "Upload failed");
+    return false;
+  }finally{
+    updateSubmitButton();
   }
-
-  updateSubmitButton();
 }
 
 function setPhotoStatus(letter, type, message) {
@@ -802,6 +822,7 @@ function updateSubmitButton() {
   // get auto-validated on submit, so an error there still stops the order.
   const blocked =
     privateAccessBlocked ||
+    window.LifeLettersPhotoSaves?.busy() ||
     (surveySession?.active && Object.values(state).some(s => !s.isDefault && !s.storagePath)) ||
     invalid.length > 0 ||
     validating.length > 0 ||
@@ -864,6 +885,7 @@ async function submitOrder() {
 }
 
 async function submitOrderOnce() {
+  if(window.LifeLettersPhotoSaves?.busy()){showToast('Please wait for your photos to finish saving.');return;}
   if (privateAccessBlocked || !confirmPhotoPermission()) return;
   if(!window.LifeLettersChildPhoto.ready()){showToast("Please upload your child's title-card photo first.");document.getElementById("chooseChildPhoto").focus();return;}
   const customerName = document.getElementById("customerName").value.trim();
@@ -1115,6 +1137,7 @@ function saveProgress() {
         isDefault: !!s.isDefault,
         photoUrl: s.photoUrl || null,
         storagePath: s.storagePath || null,
+        photoWarning:s.photoWarning||'',
         feedback: s.feedback || "",
       };
     }
@@ -1123,9 +1146,15 @@ function saveProgress() {
       if (!surveySession?.active) return;
     }
     try { localStorage.setItem(progressKey(), JSON.stringify(data)); } catch { /* Online saving still works when browser storage is full. */ }
-    if (surveySession?.active) surveySession.save(data).catch(() => {});
+    if (surveySession?.active) {
+      const saved=surveySession.save(data);
+      saved.catch(()=>{}); // Autosave errors are shown by the session notice.
+      return saved;
+    }
   } catch (err) {
     console.warn("Could not save progress:", err);
+    surveySession?.notice('Could not finish saving. Keep this tab open and try again.',true);
+    const failure=Promise.reject(err);failure.catch(()=>{});return failure;
   }
 }
 
@@ -1196,7 +1225,8 @@ function restoreProgress(cloudData = null) {
       state[letter].photoUrl = saved.photoUrl;
       state[letter].storagePath = saved.storagePath || null;
       showPhotoPreview(letter, saved.photoUrl);
-      setPhotoStatus(letter, "success", "Saved photo");
+      state[letter].photoWarning=saved.photoWarning||'';
+      setPhotoStatus(letter,saved.photoWarning?'warning':'success',saved.photoWarning||'Saved photo');
     }
   }
 
@@ -1236,14 +1266,24 @@ function startOver() {
   window.location.reload();
 }
 
+let manualSaveRunning=false;
 async function handleManualSave() {
-  saveProgress();
-  if (surveySession?.active) {
-    try { await surveySession.flush(); showToast("Saved online. Use your private email link to continue on any device."); }
-    catch (error) { showToast(error.message); }
-    return;
-  }
-  showToast("Progress saved on this device — come back anytime to finish.");
+  if(privateAccessBlocked){showToast('Could not open your saved survey. Keep this tab open and reopen your private email link before saving.');return;}
+  if(manualSaveRunning)return;
+  manualSaveRunning=true;
+  const button=document.getElementById('saveBtn'),label=button.innerHTML;
+  button.disabled=true;button.textContent='Saving photos & answers…';
+  if(saveTimer)clearTimeout(saveTimer);
+  try{
+    const failed=await window.LifeLettersPhotoSaves.settle();
+    await saveProgress();
+    if(surveySession?.active){
+      await surveySession.flush();
+      if(failed.length){const message=`Your words and completed photos are saved. Please retry the photo upload for: ${failed.map(l=>l==='TITLE'?"child’s photo":l.toLowerCase()).join(', ')} before leaving.`;surveySession.notice(message,true);showToast(message);}
+      else showToast('All photos and answers are saved online. You can safely close this tab and reopen your private email link.');
+    }else showToast('Progress saved on this device — come back anytime to finish.');
+  }catch(error){showToast(error.message||'Could not finish saving. Keep this tab open and try again.');}
+  finally{button.disabled=false;button.innerHTML=label;manualSaveRunning=false;}
 }
 
 // ============================================

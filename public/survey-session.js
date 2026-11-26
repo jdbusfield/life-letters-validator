@@ -29,8 +29,12 @@ window.LifeLettersSurvey = {
       active: true, id, path, info, revision: info.revision, pending: null, running: null, conflict: false,
       async flush() {
         if (this.conflict) throw new Error("This survey changed on another device. Reload before editing further.");
-        if (this.running) return this.running;
-        this.running = (async () => {
+        if (this.running) {
+          await this.running;
+          if(this.pending)return this.flush();
+          return;
+        }
+        const task = (async () => {
           while (this.pending) {
             const draft = this.pending;
             this.pending = null;
@@ -46,8 +50,10 @@ window.LifeLettersSurvey = {
               throw error;
             }
           }
-        })().finally(() => { this.running = null; });
-        return this.running;
+        })();
+        this.running=task;
+        try{await task;}finally{if(this.running===task)this.running=null;}
+        if(this.pending)return this.flush();
       },
       save(draft) {
         if (this.info.status === "submitted") return Promise.resolve();

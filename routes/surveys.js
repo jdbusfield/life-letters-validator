@@ -110,8 +110,11 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
     if (!["png", "jpeg"].includes(check.info.format)) throw fault(422, "Please choose a JPG or PNG photo for printing");
     try {
       const document = await PDFDocument.create();
-      if (check.info.format === "png") await document.embedPng(req.file.buffer);
-      else await document.embedJpg(req.file.buffer);
+      // Small Multer buffers can be slices of a pooled ArrayBuffer. pdf-lib's
+      // JPEG reader starts at byte zero, so give it an owned, zero-offset copy.
+      const imageBytes=Uint8Array.from(req.file.buffer);
+      if (check.info.format === "png") await document.embedPng(imageBytes);
+      else await document.embedJpg(imageBytes);
     } catch { throw fault(422, "This photo could not be read. Please choose another JPG or PNG."); }
     const id = randomUUID(), type = check.info.format === "png" ? "image/png" : "image/jpeg";
     const path = `surveys/${survey.id}/${letter}/${id}.${check.info.format === "png" ? "png" : "jpg"}`;
@@ -119,7 +122,7 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
     if (storageError) throw storageError;
     const { error } = await db.from("survey_photos").insert({ id, survey_id: survey.id, letter, storage_path: path, content_type: type });
     if (error) { await db.storage.from(PHOTO_BUCKET).remove([path]); throw error; }
-    res.json({ success: true, letter, url: photoUrl(survey.id, id), storagePath: path, size: req.file.size });
+    res.json({ success: true, letter, url: photoUrl(survey.id, id), storagePath: path, size: req.file.size, warning:check.warning||null });
   }));
   router.get("/api/surveys/:id/photos/:photoId", route(async (req, res) => {
     const { survey } = await authorize(req, true);
