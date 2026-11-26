@@ -8,4 +8,4 @@ The preview contains the title card and all 26 letter cards. Parents can switch 
 
 Validation: all five colors and front/back controls reviewed in the browser; phone-width layout checked; all 130 letter photo-fit rectangles verified inside transparent artwork; text measurements, curved name glyph positions, and title-photo placement compared with the print functions in `test/card-preview.test.js`.
 
-Launch limitation: this change updates the customer preview. Only the blue final PDF template is currently connected to the final print exporter. The other four colors’ print-export setup remains a separate launch task; a screen preview is not a production PDF.
+All five colors are connected to the final designer PDF exporter. See `docs/designer-print-colors.md` for template verification, output sizing and operational checks.

@@ -1,0 +1,11 @@
+# Final designer PDF export: five lowercase colors
+
+Every private lowercase survey now selects its exact final blue, pink, green, orange or yellow PDF from the private `survey-pdfs/templates` folder. Template metadata, immutable SHA-256 checksums and answer-panel colors live in `lib/designerTemplates.js`. The generic legacy renderer cannot be used for a private survey with missing or unsupported color/style settings; generation fails for review instead.
+
+The shared renderer in `lib/designerBlueDeck.js` preserves all 56 source pages, including two introductory cards and 26 letter front/back pairs. It places the dedicated title photo beneath page-three art, draws the approved auto-sized white curved Poppins Bold name, contains each letter photo beneath its transparent front, adds Poppins Regular answers at 25 pt with fitting, and corrects Q/X sound lines against each color's matching background panel. Existing blue exports use the same geometry. The legacy blue helper exports remain for older offline proofs.
+
+MediaBox and BleedBox are 324 x 414 pt. TrimBox is inset 9 pt, for finished 306 x 396 pt (4.25 x 5.5 inches). No crop marks are added. The existing admin Canva export continues making a finished-size PDF without rescaling the content. Download/upload to Canva remains manual and printing requires review.
+
+Rebuilding: upload an approved original to its private template path, update its checksum only after layout review, and rebuild the public preview atlases from the same original. Never substitute preview WebP artwork for the original print PDF. Never put customer photos or generated PDFs into the template folder.
+
+Verification: `node --test test/*.test.js`; `node scripts/render-all-color-proofs.mjs` creates offline synthetic/stock-photo proofs for every color. Verify 56 pages, artwork, title-name clearance (including long names), photo containment, custom answers, corrected /kw/ and /ks/, print boxes, and the final Canva-sized file. Live internal submissions should finish through the existing durable PDF queue for each added color before launch. Do not regenerate real customer sets during deployment.
