@@ -1318,33 +1318,19 @@ function previewImageHtml(letter) {
   return `<div class="pv-photo pv-photo-empty">${label}</div>`;
 }
 
-function openPreview() {
-  const grid = document.getElementById("previewGrid");
-  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-  grid.innerHTML = letters
-    .map((letter) => {
-      const s = state[letter];
-      const word = s.isDefault ? DEFAULT_CARDS[letter] || "" : s.word || "";
-      const badge = s.isDefault
-        ? '<span class="pv-tag default">Default</span>'
-        : s.status === "valid"
-          ? '<span class="pv-tag ok">✓</span>'
-          : s.status === "invalid" || s.status === "error"
-            ? '<span class="pv-tag bad">!</span>'
-            : word
-              ? '<span class="pv-tag pending">?</span>'
-              : '<span class="pv-tag empty">—</span>';
-      return `
-        <div class="pv-card">
-          <div class="pv-card-top">${letterDisplayHtml(letter)}${badge}</div>
-          ${previewImageHtml(letter)}
-        <div class="pv-word">${word ? escapeSurveyText(word) : "<em>empty</em>"}</div>
-        </div>`;
-    })
-    .join("");
-
+async function openPreview() {
   document.getElementById("previewOverlay").style.display = "flex";
   document.body.style.overflow = "hidden";
+  document.getElementById('previewClose').focus();
+  try{
+    const entries=[...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(letter=>{
+      const s=state[letter];
+      let photoUrl=s.isDefault?DEFAULT_IMAGES[letter]:s.photoUrl;
+      if(!photoUrl&&!s.isDefault){const preview=document.getElementById(`preview-${letter}`),wrap=document.getElementById(`preview-wrap-${letter}`);if(wrap?.style.display!=='none')photoUrl=preview?.getAttribute('src');}
+      return {letter,word:s.isDefault?DEFAULT_CARDS[letter]||'':s.word||'',photoUrl,isDefault:s.isDefault,status:s.status};
+    });
+    await window.LifeLettersCardPreview.render({color:selectedCardColor(),childName:document.getElementById('childName').value,childPhoto:window.LifeLettersChildPhoto.value(),entries});
+  }catch(error){document.getElementById('previewGrid').textContent=error.message||'The card preview could not load. Please try again.';}
 }
 
 function escapeSurveyText(value) {
@@ -1352,8 +1338,10 @@ function escapeSurveyText(value) {
 }
 
 function closePreview() {
+  window.LifeLettersCardPreview?.cancel();
   document.getElementById("previewOverlay").style.display = "none";
   document.body.style.overflow = "";
+  document.getElementById('previewBtn').focus();
 }
 
 // ============================================

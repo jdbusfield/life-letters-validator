@@ -1040,6 +1040,8 @@ h2 {
 }
 
 /* ---- Preview modal ---- */
+@font-face { font-family:LifeLettersCardRegular;src:url('/assets/card-preview/fonts/Poppins-Regular.ttf') format('truetype');font-weight:400;font-display:block; }
+@font-face { font-family:LifeLettersCardBold;src:url('/assets/card-preview/fonts/Poppins-Bold.ttf') format('truetype');font-weight:700;font-display:block; }
 .preview-overlay {
   position: fixed;
   inset: 0;
@@ -1056,7 +1058,7 @@ h2 {
   border-radius: var(--radius);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
   width: 100%;
-  max-width: 760px;
+  max-width: 900px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -1098,11 +1100,22 @@ h2 {
 
 .preview-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
   padding: 16px 24px;
   overflow-y: auto;
 }
+.preview-side-controls { display:flex;gap:8px;padding:12px 24px 0; }
+.preview-side-controls button { border:1px solid var(--border);border-radius:999px;padding:9px 20px;background:white;color:var(--brand-teal);font:inherit;cursor:pointer; }
+.preview-side-controls button[aria-pressed="true"] { background:var(--brand-teal);color:white; }
+.designed-preview-card { min-width:0; }
+.designed-preview-card h3 { font-size:.85rem;margin:0 0 6px;text-align:center; }
+.designed-preview-face { aspect-ratio:306/396;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px #19374620; }
+.designed-preview-face[hidden] { display:none; }
+.designed-card-art { display:block;width:100%;height:100%;font-kerning:none;font-variant-ligatures:none; }
+.designed-preview-description { font-size:.73rem;line-height:1.4;min-height:2.8em;margin:7px 0 2px;text-align:center;color:var(--text-light);overflow-wrap:anywhere; }
+.preview-loading { grid-column:1/-1; }
+@media(max-width:480px){.preview-overlay{padding:10px}.preview-grid{grid-template-columns:1fr;max-width:100%;padding:14px 26px}.preview-side-controls{padding-left:18px}.preview-header{padding:14px 18px}.preview-note{padding-left:18px;padding-right:18px}}
 
 .pv-card {
   border: 2px solid var(--border);

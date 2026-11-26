@@ -173,7 +173,11 @@
         <h2>Preview your cards</h2>
         <button class="preview-close" id="previewClose" title="Close">&times;</button>
       </div>
-      <p class="preview-note" id="previewNote">This is a rough preview of the front of each card. Final printed cards are 4.25&Prime; &times; 5.5&Prime;.</p>
+      <p class="preview-note" id="previewNote">Loading your chosen card design…</p>
+      <div class="preview-side-controls" role="group" aria-label="Card side">
+        <button type="button" data-preview-side="front" aria-pressed="true">Fronts</button>
+        <button type="button" data-preview-side="back" aria-pressed="false">Backs</button>
+      </div>
       <div class="preview-grid" id="previewGrid"></div>
       <div class="preview-actions">
         <button class="btn btn-secondary" id="previewKeepEditing">Keep editing</button>
@@ -201,5 +205,6 @@
   <script src="child-photo.js"></script>
   <script src="app.js"></script>
   <script type="module" src="letter-audio.js"></script>
+  <script type="module" src="card-preview.js"></script>
 </body>
 </html>
