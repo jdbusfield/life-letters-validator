@@ -13,11 +13,11 @@
   async function load() {
     try {
       const data=await request();
-      byId("photoRetentionStatus").textContent=`Automatic survey cleanup ${data.enabled ? "enabled" : "paused"}. Last check: ${date(data.worker?.last_checked_at)}.${data.worker?.error_code ? " A cleanup check needs review." : ""} Older shipped sets missing a shipment date: ${data.historicalShipmentsNeedingDate || 0}. Inactive unfinished surveys to review, without automatic deletion: ${data.inactiveDraftsForReview || 0}.`;
+      byId("photoRetentionStatus").textContent=`Automatic personalization form cleanup ${data.enabled ? "enabled" : "paused"}. Last check: ${date(data.worker?.last_checked_at)}.${data.worker?.error_code ? " A cleanup check needs review." : ""} Older shipped sets missing a shipment date: ${data.historicalShipmentsNeedingDate || 0}. Inactive unfinished personalization forms to review, without automatic deletion: ${data.inactiveDraftsForReview || 0}.`;
       if(data.legacyFilesForReview || data.legacyOrdersForReview) byId("photoRetentionStatus").textContent+=` Earlier-system records need a separate date and file review: ${data.legacyOrdersForReview || 0} orders, ${data.legacyFilesForReview || 0} stored files. These have not been bulk-deleted.`;
       if(data.pdfLocksForReview) byId("photoRetentionStatus").textContent+=` ${data.pdfLocksForReview} interrupted PDF generation locks need review before cleanup.`;
       const container=byId("photoRetentionJobs");container.replaceChildren();
-      const states={scheduled:"Scheduled",deleting:"Removing survey files",app_deleted:"Survey files removed — check working copies",complete:"Survey files removed; managed working copies confirmed"};
+      const states={scheduled:"Scheduled",deleting:"Removing personalization form files",app_deleted:"Personalization form files removed — check working copies",complete:"Personalization form files removed; managed working copies confirmed"};
       for(const job of data.jobs || []) {
         const panel=document.createElement("div");panel.className="survey-link-panel";
         text(panel,job.order_reference,"strong");

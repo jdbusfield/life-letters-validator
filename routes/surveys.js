@@ -22,8 +22,8 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
   const route = fn => async (req, res) => {
     try { await fn(req, res); } catch (error) {
       const status = error.status || (error instanceof multer.MulterError ? 413 : 500);
-      if (status >= 500) console.error("Survey request failed", { code: error.code, status });
-      res.status(status).json({ error: status >= 500 ? "Could not save your survey. Please try again." : error.message });
+      if (status >= 500) console.error("Personalization form request failed", { code: error.code, status });
+      res.status(status).json({ error: status >= 500 ? "Could not save your personalization form. Please try again." : error.message });
     }
   };
   router.use((req, res, next) => {
@@ -35,17 +35,17 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
     next();
   });
   async function getSurvey(id) {
-    if (!db) throw fault(503, "Saved surveys are not configured yet");
-    if (!isId(id)) throw fault(404, "Survey not found");
+    if (!db) throw fault(503, "Saved personalization forms are not configured yet");
+    if (!isId(id)) throw fault(404, "Personalization form not found");
     const { data, error } = await db.from("surveys").select("*").eq("id", id).maybeSingle();
     if (error) throw error;
-    if (!data) throw fault(404, "Survey not found");
+    if (!data) throw fault(404, "Personalization form not found");
     return data;
   }
   function checkAccess(survey, token) {
-    if (!validToken(token) || hashToken(token) !== survey.access_token_hash) throw fault(401, "Open the private survey link from your email to continue");
+    if (!validToken(token) || hashToken(token) !== survey.access_token_hash) throw fault(401, "Open the private personalization form link from your email to continue");
     requirePersonalizationAvailable(survey);
-    if (survey.revoked_at || new Date(survey.expires_at).getTime() <= Date.now()) throw fault(401, "Open the private survey link from your email to continue");
+    if (survey.revoked_at || new Date(survey.expires_at).getTime() <= Date.now()) throw fault(401, "Open the private personalization form link from your email to continue");
   }
   async function authorize(req, allowAdmin = false) {
     const survey = await getSurvey(req.params.id);
@@ -85,7 +85,7 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
   router.put("/api/surveys/:id", route(async (req, res) => {
     const { survey, token } = await authorize(req);
     editable(survey);
-    if (!Number.isInteger(req.body.revision) || req.body.revision < 0) throw fault(400, "A saved survey version is required");
+    if (!Number.isInteger(req.body.revision) || req.body.revision < 0) throw fault(400, "A saved personalization form version is required");
     const draft = safeDraft(req.body.draft, survey, await photosFor(survey.id));
     if (draft.photoPermissionAccepted && req.body.draft.photoPermissionVersion !== PHOTO_PERMISSION_VERSION) throw fault(422, "The photo privacy notice has changed. Reload and confirm the checkbox again.");
     const permission = draft.photoPermissionAccepted ? { photo_permission_at: hasPhotoPermission(survey) ? survey.photo_permission_at : new Date().toISOString(), photo_permission_version: PHOTO_PERMISSION_VERSION }
@@ -95,7 +95,7 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
       .eq("id", survey.id).eq("revision", req.body.revision).eq("status", "draft").eq("access_token_hash", hashToken(token))
       .select("revision,updated_at").maybeSingle();
     if (error) throw error;
-    if (!data) throw fault(409, "This survey changed on another device. Reload before editing further.");
+    if (!data) throw fault(409, "This personalization form changed on another device. Reload before editing further.");
     res.json({ revision: data.revision, updatedAt: data.updated_at });
   }));
   router.post("/api/surveys/:id/photos/:letter", (req, res, next) => {
@@ -139,7 +139,7 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
   router.post("/api/surveys/:id/submit", route(async (req, res) => {
     const { survey, token } = await authorize(req);
     if (survey.status === "submitted") return res.json({ success: true, alreadySubmitted: true, orderId: survey.submitted_order_id });
-    if (req.body.revision !== survey.revision) throw fault(409, "Reload the latest saved survey before submitting");
+    if (req.body.revision !== survey.revision) throw fault(409, "Reload the latest saved personalization form before submitting");
     const photos = await photosFor(survey.id);
     const draft = safeDraft(survey.draft, survey, photos);
     if (!draft.customerName) throw fault(422, "Please enter your name");
@@ -153,19 +153,19 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
     if (invalid.length) return res.status(422).json({ error: `Please check the sounds for: ${invalid.join(", ")}`, results });
     const { data, error } = await db.rpc("submit_life_letters_survey", { p_survey_id: survey.id,
       p_revision: survey.revision, p_token_hash: hashToken(token), p_entries: entries });
-    if (error?.code === "40001") throw fault(409, "This survey changed. Reload before submitting.");
-    if (error?.code === "42501") throw fault(401, "Open your latest private survey link to continue");
+    if (error?.code === "40001") throw fault(409, "This personalization form changed. Reload before submitting.");
+    if (error?.code === "42501") throw fault(401, "Open your latest private personalization form link to continue");
     if (error?.code === "22023") throw fault(409, "These cards are already being prepared. Contact Life Letters for help.");
     if (error) throw error;
     if (!data.alreadySubmitted) {
       const { data: order, error: orderError } = await db.from("orders").select("*").eq("id", data.orderId).single();
-      if (!orderError && order) generatePDF(order, entries).catch(() => console.error("Survey PDF generation failed", { surveyId: survey.id }));
+      if (!orderError && order) generatePDF(order, entries).catch(() => console.error("Personalization form PDF generation failed", { surveyId: survey.id }));
     }
     res.json({ success: true, ...data });
   }));
   router.use("/api/admin/surveys", (req, res, next) => {
     if (!req.session?.isAdmin) return res.status(401).json({ error: "Unauthorized" });
-    if (!db) return res.status(503).json({ error: "Saved surveys are not configured yet" });
+    if (!db) return res.status(503).json({ error: "Saved personalization forms are not configured yet" });
     next();
   });
   router.get("/api/admin/surveys", route(async (_req, res) => {
@@ -175,16 +175,16 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
     res.json({ surveys: data });
   }));
   router.post("/api/admin/surveys", route(async (req, res) => {
-    if (!process.env.PUBLIC_BASE_URL && process.env.NODE_ENV === "production") throw fault(503, "Survey address is not configured");
+    if (!process.env.PUBLIC_BASE_URL && process.env.NODE_ENV === "production") throw fault(503, "Personalization form address is not configured");
     const items = makeSurveyRows(req.body, process.env.PUBLIC_BASE_URL || "http://localhost:3456");
     const { error } = await db.from("surveys").insert(items.map(item => item.row));
-    if (error?.code === "23505") throw fault(409, "These surveys were already created. Reissue a link from the list below.");
+    if (error?.code === "23505") throw fault(409, "These personalization forms were already created. Reissue a link from the list below.");
     if (error) throw error;
     res.status(201).json({ surveys: items.map(({ row, link }) => ({ id: row.id, setLabel: row.set_label, email: row.customer_email, link })) });
   }));
   router.post("/api/admin/surveys/:id/link", route(async (req, res) => {
     const base = process.env.PUBLIC_BASE_URL;
-    if (!base) throw fault(503, "Survey address is not configured");
+    if (!base) throw fault(503, "Personalization form address is not configured");
     const survey = await getSurvey(req.params.id);
     requirePersonalizationAvailable(survey);
     const token = newToken();
@@ -192,7 +192,7 @@ export function createSurveyRouter({ db = supabase, validate = entries => valida
       expires_at: new Date(Date.now() + 180 * 86400_000).toISOString(), revision: survey.revision + 1 })
       .eq("id", survey.id).eq("revision", survey.revision).select("id").maybeSingle();
     if (error) throw error;
-    if (!data) throw fault(409, "The survey changed. Please try again.");
+    if (!data) throw fault(409, "The personalization form changed. Please try again.");
     res.json({ link: `${new URL(base).origin}/#survey=${survey.id}&token=${token}`, email: survey.customer_email, setLabel: survey.set_label });
   }));
   router.post("/api/admin/surveys/:id/reopen", route(async (req, res) => {

@@ -15,7 +15,7 @@ test("alerts contain the reference and authenticated admin link, with no custome
     customer_email: "parent@example.com", access_token: "private-token", photo_url: "https://example.com/private-photo" }, config);
   assert.deepEqual(message.to, ["owner@example.com"]);
   assert.match(message.text, /https:\/\/survey.example.com\/admin/);
-  assert.match(message.text, /latest survey status/);
+  assert.match(message.text, /latest personalization form status/);
   assert.match(message.html, /&lt;set&gt;/);
   assert.doesNotMatch(message.html, /<set>|<order>/);
   assert.doesNotMatch(message.subject, /[\r\n]/);

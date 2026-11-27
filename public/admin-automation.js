@@ -16,7 +16,7 @@
         row.textContent = `${job.order_reference}${job.test_order ? " (test)" : ""} · ${job.customer_email || "No email address"} · ${labels[job.status] || job.status}${job.error_code ? ` · ${job.error_code.replaceAll("_", " ")}` : ""}`;
         list.append(row);
       }
-      if (!result.jobs.length) list.textContent = "No automatic order emails yet. Manual surveys remain in the list above.";
+      if (!result.jobs.length) list.textContent = "No automatic order emails yet. Manual personalization forms remain in the list above.";
     } catch (error) { status.textContent = error.message; }
   }
   document.addEventListener("DOMContentLoaded", () => {

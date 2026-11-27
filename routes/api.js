@@ -101,7 +101,7 @@ router.post("/api/validate-batch", async (req, res) => {
 
 // POST /api/submit-order — submit completed form to Supabase
 router.post("/api/submit-order", async (req, res) => {
-  if (process.env.REQUIRE_SURVEY_ACCESS === "true") return res.status(401).json({ error: "Please submit through your private survey link" });
+  if (process.env.REQUIRE_SURVEY_ACCESS === "true") return res.status(401).json({ error: "Please submit through your private personalization form link" });
   try {
     if (!supabase) {
       return res.status(503).json({ error: "Database not configured" });
@@ -194,7 +194,7 @@ router.post("/api/submit-order", async (req, res) => {
 
 // GET /api/order-status/:orderNumber — check order status
 router.get("/api/order-status/:orderNumber", async (req, res) => {
-  if (process.env.REQUIRE_SURVEY_ACCESS === "true" && !req.session?.isAdmin) return res.status(401).json({ error: "Open your private survey link to see its status" });
+  if (process.env.REQUIRE_SURVEY_ACCESS === "true" && !req.session?.isAdmin) return res.status(401).json({ error: "Open your private personalization form link to see its status" });
   try {
     if (!supabase) {
       return res.status(503).json({ error: "Database not configured" });

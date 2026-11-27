@@ -16,7 +16,7 @@
   async function upload(file){
     if(!file||uploading||options.isBlocked())return false;
     const session=options.getSession();
-    if(!session?.active){status("Open your private survey link to upload your child's photo.",true);return false;}
+    if(!session?.active){status("Open your private personalization form link to upload your child's photo.",true);return false;}
     if(!options.confirmPermission())return false;
     if(!["image/jpeg","image/png"].includes(file.type)||file.size>10*1024*1024){status("Choose a JPG or PNG photo no larger than 10 MB.",true);return false;}
     uploading=true;controls();options.update();status("Uploading your child's photo…");

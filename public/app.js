@@ -548,7 +548,7 @@ function confirmPhotoPermission() {
 
 function processPhoto(letter, file) {
   if(window.LifeLettersPhotoSaves?.busy(letter)){showToast('Please wait for this photo to finish saving.');return;}
-  if(privateAccessBlocked){setPhotoStatus(letter,'error','Open your private survey link to add photos.');return;}
+  if(privateAccessBlocked){setPhotoStatus(letter,'error','Open your private personalization form link to add photos.');return;}
   if (!confirmPhotoPermission()) return;
   if (file.size > 10 * 1024 * 1024) {
     window.LifeLettersPhotoSaves.fail(letter);
@@ -583,7 +583,7 @@ function removePhoto(letter) {
 }
 
 async function uploadPhoto(letter, file) {
-  if (privateAccessBlocked) { setPhotoStatus(letter, "error", "Open your private survey link to add photos."); return; }
+  if (privateAccessBlocked) { setPhotoStatus(letter, "error", "Open your private personalization form link to add photos."); return; }
   if (!confirmPhotoPermission()) return;
   setPhotoStatus(letter, "uploading", "Uploading...");
 
@@ -1268,7 +1268,7 @@ function startOver() {
 
 let manualSaveRunning=false;
 async function handleManualSave() {
-  if(privateAccessBlocked){showToast('Could not open your saved survey. Keep this tab open and reopen your private email link before saving.');return;}
+  if(privateAccessBlocked){showToast('Could not open your saved personalization form. Keep this tab open and reopen your private email link before saving.');return;}
   if(manualSaveRunning)return;
   manualSaveRunning=true;
   const button=document.getElementById('saveBtn'),label=button.innerHTML;

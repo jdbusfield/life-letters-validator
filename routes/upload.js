@@ -6,7 +6,7 @@ import { checkUploadedPhoto } from "../lib/imageCheck.js";
 
 const router = Router();
 router.use("/api/upload/:letter", (_req, res, next) => {
-  if (process.env.REQUIRE_SURVEY_ACCESS === "true") return res.status(401).json({ error: "Open your private survey link to upload photos" });
+  if (process.env.REQUIRE_SURVEY_ACCESS === "true") return res.status(401).json({ error: "Open your private personalization form link to upload photos" });
   next();
 });
 

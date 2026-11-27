@@ -74,9 +74,9 @@ export async function renderDesignerPreview({color,childName='',childPhoto,entri
  const child=childPhoto?{...childPhoto,photoUrl:allowedPreviewPhoto(childPhoto.photoUrl,origin)}:null;
  const size=await dimensions(child?.photoUrl);if(id!==renderId)return;
  const art=manifest.colors[selected];
- note.textContent=`${selected[0].toUpperCase()+selected.slice(1)} ${color?'cards':'example — choose your card color in the survey'}. These previews use your designer’s artwork. Finished cards are 4.25″ × 5.5″; screens and printed colors can differ slightly.`;
+ note.textContent=`${selected[0].toUpperCase()+selected.slice(1)} ${color?'cards':'example — choose your card color in the personalization form'}. These previews use your designer’s artwork. Finished cards are 4.25″ × 5.5″; screens and printed colors can differ slightly.`;
  const card=(label,front,back,description)=>`<article class="designed-preview-card"><h3>${esc(label)}</h3><div class="designed-preview-face preview-front">${front}</div><div class="designed-preview-face preview-back" hidden>${back}</div><p class="designed-preview-description">${esc(description)}</p></article>`;
- const title=card('Title card',titleFront(art,child,size,childName,metrics.bold),page(atlas(art.back,0),'Title card back: how to use Life Letters'),childName||'Add your child’s name in the survey');
+ const title=card('Title card',titleFront(art,child,size,childName,metrics.bold),page(atlas(art.back,0),'Title card back: how to use Life Letters'),childName||'Add your child’s name in the personalization form');
  grid.innerHTML=title+LETTERS.map((letter,n)=>{
   const source=entries.find(e=>e.letter===letter)||{};
   const entry={...source,letter,word:source.word||'',photoUrl:allowedPreviewPhoto(source.photoUrl,origin)};
