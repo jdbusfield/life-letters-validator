@@ -4,15 +4,18 @@ window.LifeLettersSurvey = {
     const fragment = new URLSearchParams(location.hash.slice(1));
     const id = fragment.get("survey") || new URLSearchParams(location.search).get("survey");
     const config = await fetch("/api/survey-config").then(response => {
-      if (!response.ok) throw new Error("Could not connect to saved surveys. Please reload.");
+      if (!response.ok) throw new Error("Could not connect to saved personalization forms. Please reload.");
       return response.json();
     });
     if (!id) return { active: false, required: config.accessRequired };
-    if (!/^[a-f0-9-]{36}$/i.test(id)) throw new Error("This private survey link is invalid");
+    if (!/^[a-f0-9-]{36}$/i.test(id)) throw new Error("This private personalization form link is invalid");
     const path = `/api/surveys/${id}`;
     const request = async (suffix = "", options = {}) => {
       const response = await fetch(path + suffix, { credentials: "same-origin", ...options });
       const data = await response.json();
+      if (response.status === 410) {
+        try { localStorage.removeItem(`lifeLetters:survey:${id}`); } catch { /* Device storage may be unavailable. */ }
+      }
       if (!response.ok) throw Object.assign(new Error(data.error || "Could not save. Keep this tab open and try again."), { status: response.status });
       return data;
     };
@@ -25,9 +28,13 @@ window.LifeLettersSurvey = {
     const session = {
       active: true, id, path, info, revision: info.revision, pending: null, running: null, conflict: false,
       async flush() {
-        if (this.conflict) throw new Error("This survey changed on another device. Reload before editing further.");
-        if (this.running) return this.running;
-        this.running = (async () => {
+        if (this.conflict) throw new Error("This personalization form changed on another device. Reload before editing further.");
+        if (this.running) {
+          await this.running;
+          if(this.pending)return this.flush();
+          return;
+        }
+        const task = (async () => {
           while (this.pending) {
             const draft = this.pending;
             this.pending = null;
@@ -43,8 +50,10 @@ window.LifeLettersSurvey = {
               throw error;
             }
           }
-        })().finally(() => { this.running = null; });
-        return this.running;
+        })();
+        this.running=task;
+        try{await task;}finally{if(this.running===task)this.running=null;}
+        if(this.pending)return this.flush();
       },
       save(draft) {
         if (this.info.status === "submitted") return Promise.resolve();

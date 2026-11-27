@@ -64,3 +64,22 @@ for (const mode of ["single", "batch"]) {
     assert.equal(context.lastCardStatus, "empty");
   });
 }
+
+test("default remaining preserves pending words and uploaded photos and undoes only its own defaults",()=>{
+  const {context}=fixture();
+  vm.runInContext(`
+    for (const letter of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") state[letter]={word:"",status:"empty",isDefault:false};
+    state.A={word:"apple",status:"pending",isDefault:false,photoUrl:"owned-photo.jpg",storagePath:"owned/path"};
+    state.B={word:"",status:"empty",isDefault:false,photoUrl:"another-photo.jpg"};
+    state.C={word:"",status:"valid",isDefault:true};
+    applied=[];toggleDefault=letter=>{state[letter].isDefault=!state[letter].isDefault;applied.push(letter)};
+    handleDefaultAllToggle({target:{checked:true}});
+  `,context);
+  assert.equal(vm.runInContext('state.A.isDefault',context),false);
+  assert.equal(vm.runInContext('state.A.photoUrl',context),"owned-photo.jpg");
+  assert.equal(vm.runInContext('state.B.isDefault',context),false);
+  assert.equal(vm.runInContext('applied.length',context),23);
+  vm.runInContext('handleDefaultAllToggle({target:{checked:false}})',context);
+  assert.equal(vm.runInContext('state.C.isDefault',context),true);
+  assert.equal(vm.runInContext('state.D.isDefault',context),false);
+});

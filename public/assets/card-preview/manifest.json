@@ -1,0 +1,45 @@
+{
+  "version": "20261125",
+  "width": 324,
+  "height": 414,
+  "trim": {
+    "x": 9,
+    "y": 9,
+    "width": 306,
+    "height": 396
+  },
+  "columns": 4,
+  "rows": 7,
+  "colors": {
+    "blue": {
+      "sourceSha256": "b15b0e2499b87de00dac1855d102720db46204d3558bfe6aaa63c372f037a311",
+      "front": "/assets/card-preview/blue-front.webp?v=20261125",
+      "answerPanel": "#e1ebf7",
+      "back": "/assets/card-preview/blue-back.webp?v=20261125"
+    },
+    "pink": {
+      "sourceSha256": "5ae669bc1cde955ec06454cd1c9806c7320fa213898307355064ff35e559fa50",
+      "front": "/assets/card-preview/pink-front.webp?v=20261125",
+      "answerPanel": "#fbe6e1",
+      "back": "/assets/card-preview/pink-back.webp?v=20261125"
+    },
+    "green": {
+      "sourceSha256": "b122534a0cd62172154d632ec8fccc59cb96bbc2c43284d7e729cadd9da38de8",
+      "front": "/assets/card-preview/green-front.webp?v=20261125",
+      "answerPanel": "#f0f7f0",
+      "back": "/assets/card-preview/green-back.webp?v=20261125"
+    },
+    "orange": {
+      "sourceSha256": "9fa0300a3887c512f2d9758aedd592d65afa18083615122fd89a35cd8c65584e",
+      "front": "/assets/card-preview/orange-front.webp?v=20261125",
+      "answerPanel": "#fde7d0",
+      "back": "/assets/card-preview/orange-back.webp?v=20261125"
+    },
+    "yellow": {
+      "sourceSha256": "7a56050653cbf7a96ddf41711a9e82e2250defb92713e3741408e8f5bb68c173",
+      "front": "/assets/card-preview/yellow-front.webp?v=20261125",
+      "answerPanel": "#fff2e2",
+      "back": "/assets/card-preview/yellow-back.webp?v=20261125"
+    }
+  }
+}

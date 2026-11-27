@@ -6,7 +6,7 @@
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
     } : {});
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Saved surveys are not available yet");
+    if (!response.ok) throw new Error(result.error || "Saved personalization forms are not available yet");
     return result;
   }
   function notice(message) { byId("surveyAdminNotice").textContent = message; }
@@ -47,19 +47,23 @@
         row.className = "survey-admin-row";
         const description = document.createElement("span");
         description.textContent = `${survey.order_reference} · ${survey.set_label} · ${survey.customer_email} · ${survey.status}`;
+        if (survey.personalization_purging_at || survey.personalization_deleted_at) {
+          description.textContent = `${survey.order_reference} · Personalization removed · order record retained`;
+          row.append(description); container.append(row); continue;
+        }
         row.append(description, button("Replace private link", async () => {
           if (!confirm("Replace this private link? The previous link and device access will stop working.")) return;
           try { showLinks([await request(`/${survey.id}/link`, {})]); } catch (error) { notice(error.message); }
         }));
         if (survey.submitted_order_id) row.append(button("View submitted cards", () => window.viewOrder(survey.submitted_order_id)));
         if (survey.status === "submitted") row.append(button("Reopen for changes", async () => {
-          if (!confirm("Reopen this survey for the customer? Its current PDF will need to be generated again after resubmission.")) return;
-          try { await request(`/${survey.id}/reopen`, {}); await load(); notice("Survey reopened. The customer can use their current private link."); }
+          if (!confirm("Reopen this personalization form for the customer? Its current PDF will need to be generated again after resubmission.")) return;
+          try { await request(`/${survey.id}/reopen`, {}); await load(); notice("Personalization form reopened. The customer can use their current private link."); }
           catch (error) { notice(error.message); }
         }));
         container.append(row);
       }
-      if (!surveys.length) container.textContent = "No saved surveys yet.";
+      if (!surveys.length) container.textContent = "No saved personalization forms yet.";
     } catch (error) { notice(error.message); }
   }
   document.addEventListener("DOMContentLoaded", () => {

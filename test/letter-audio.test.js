@@ -21,7 +21,7 @@ test("all 26 letter buttons map to bundled single-pronunciation clips, including
   for (const letter of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
     const playing = player.play(letter);
     const file = letter === "Q" ? "qu" : letter.toLowerCase();
-    assert.equal(audio.src, `/audio/phonemes/${file}.wav`);
+    assert.equal(audio.src, `/audio/phonemes/${file}.wav?v=20261124`);
     const bytes = await readFile(new URL(`../public/audio/phonemes/${file}.wav`, import.meta.url));
     assert.equal(bytes.toString("ascii", 0, 4), "RIFF");
     assert(bytes.length > 1000, `${letter} clip is missing or empty`);
@@ -34,7 +34,7 @@ test("switching letters ignores the previous aborted request", async () => {
   const { player, audio, pending, states } = fixture();
   const first = player.play("G");
   const second = player.play("X");
-  assert.equal(audio.src, "/audio/phonemes/x.wav");
+  assert.equal(audio.src, "/audio/phonemes/x.wav?v=20261124");
   pending[0].reject(new Error("AbortError"));
   pending[1].resolve();
   await Promise.all([first, second]);

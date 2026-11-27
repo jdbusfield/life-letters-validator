@@ -8,6 +8,7 @@ let WORD_SUGGESTIONS = {};
 let LETTER_TIPS = {};
 let phonicsVersion = null;
 let DEFAULT_IMAGES = {};
+let CARD_COLORS = [];
 
 const state = {};
 let debounceTimers = {};
@@ -19,6 +20,17 @@ let privateAccessBlocked = false;
 let initializingSurvey = true;
 let restoredLocalChanges = false;
 const SUBMIT_LABEL = '<span class="btn-icon">&#128230;</span> Submit My Life Letters Cards';
+let submitInFlight = false;
+if(typeof window!=='undefined')window.onLifeLettersPhotoSettled=()=>updateSubmitButton();
+
+function confirmCardSubmission() {
+  const dialog=document.getElementById('submitConfirmation');
+  dialog.returnValue='cancel';
+  return new Promise(resolve=>{
+    dialog.addEventListener('close',()=>resolve(dialog.returnValue==='submit'),{once:true});
+    dialog.showModal();
+  });
+}
 
 // ---- Init ----
 
@@ -31,8 +43,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadLetterData();
 
   // Build UI
+  buildCardColors();
   buildHelperSheet();
   buildGrid();
+  window.LifeLettersChildPhoto.init({getSession:()=>surveySession,isBlocked:()=>privateAccessBlocked,confirmPermission:confirmPhotoPermission,save:()=>{if(saveTimer)clearTimeout(saveTimer);return saveProgress();},update:updateSubmitButton});
 
   try {
     surveySession = await window.LifeLettersSurvey.open();
@@ -41,9 +55,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       orderNumber = surveySession.info.orderReference;
       document.getElementById("customerEmail").value = surveySession.info.customerEmail;
       document.getElementById("customerEmail").readOnly = true;
-      document.getElementById("surveySetField").hidden = false;
       document.getElementById("surveySetLabel").value = surveySession.info.setLabel;
-      document.getElementById("surveySetLabel").addEventListener("input", onFieldChange);
       document.getElementById("surveyInfo").textContent = `Order ${orderNumber} · ${surveySession.info.setLabel}`;
       document.getElementById("surveyInfo").hidden = false;
       document.querySelector(".photo-help-note").textContent = "Your progress saves online automatically. Reopen your private email link on any device to continue.";
@@ -61,10 +73,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (surveySession?.info?.status === "submitted") {
     privateAccessBlocked = true;
-    document.querySelectorAll(".letters-section input, .letters-section button, .order-card input, #saveBtn, #defaultAllCheckbox, #validateAllBtn, #restoreStartOver").forEach(el => { el.disabled = true; });
+    document.querySelectorAll(".letters-section input, .letters-section button, .order-card input, .order-card button, .photo-privacy-card input, #saveBtn, #defaultAllCheckbox, #validateAllBtn, #restoreStartOver").forEach(el => { el.disabled = true; });
     surveySession.notice("Your Life Letters cards have been submitted. Contact us if you need to request a change.");
   }
 
+  window.LifeLettersChildPhoto.lock();
   // Event listeners
   document.getElementById("validateAllBtn").addEventListener("click", validateAll);
   document.getElementById("submitBtn").addEventListener("click", submitOrder);
@@ -83,6 +96,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("restoreStartOver").addEventListener("click", startOver);
 
   // Keep order fields, submit gating, and autosave in sync.
+  document.getElementById("photoPermission").addEventListener("change", onFieldChange);
+  document.getElementById("childName").addEventListener("input", onFieldChange);
   document.getElementById("customerName").addEventListener("input", onFieldChange);
   document.getElementById("customerEmail").addEventListener("input", onFieldChange);
 
@@ -115,6 +130,7 @@ async function loadLetterData() {
     LETTER_TIPS = data.letterTips || {};
     phonicsVersion = data.phonicsVersion;
     DEFAULT_IMAGES = data.defaultImages || {};
+    CARD_COLORS = data.cardColors || [];
     dataLoaded = true;
   } catch (err) {
     console.error("Failed to load letter data:", err);
@@ -126,6 +142,30 @@ async function loadLetterData() {
       WORD_SUGGESTIONS[l] = [];
     });
   }
+}
+
+function selectedCardColor() {
+  return document.querySelector('input[name="cardColor"]:checked')?.value || "";
+}
+
+function updateCardColorSelection() {
+  const color = CARD_COLORS.find(option => option.id === selectedCardColor());
+  document.getElementById("cardColorSelection").textContent = color ? `${color.name} selected for this set.` : "Choose a color above.";
+}
+
+function buildCardColors() {
+  document.getElementById("cardColorOptions").innerHTML = CARD_COLORS.map(color => `
+    <label class="card-color-option">
+      <input type="radio" name="cardColor" value="${escapeSurveyText(color.id)}" required>
+      <span class="card-color-choice">
+        <span class="card-color-swatch" style="--card-swatch:${escapeSurveyText(color.hex)}" aria-hidden="true"><span class="color-check">✓</span></span>
+        <span>${escapeSurveyText(color.name)}</span>
+      </span>
+    </label>`).join("");
+  document.querySelectorAll('input[name="cardColor"]').forEach(input => input.addEventListener("change", () => {
+    updateCardColorSelection();
+    onFieldChange();
+  }));
 }
 
 function displayLetter(letter) {
@@ -330,6 +370,8 @@ function handleGridClick(e) {
 // ---- Default Toggle ----
 
 function toggleDefault(letter) {
+  if(window.LifeLettersPhotoSaves?.busy(letter)){showToast('Please wait for this photo to finish saving.');return;}
+  window.LifeLettersPhotoSaves?.clear(letter);
   const isDefault = !state[letter].isDefault;
   state[letter].isDefault = isDefault;
 
@@ -362,8 +404,8 @@ function handleDefaultAllToggle(e) {
     defaultAllAppliedTo = new Set();
     for (const l of letters) {
       const s = state[l];
-      const hasValidCustom = !s.isDefault && s.word && s.status === "valid";
-      if (!s.isDefault && !hasValidCustom) {
+      const hasCustomInput = !s.isDefault && (s.word || s.photoUrl || s.photo || s.storagePath);
+      if (!s.isDefault && !hasCustomInput) {
         toggleDefault(l);
         defaultAllAppliedTo.add(l);
       }
@@ -497,16 +539,26 @@ function handleDrop(e) {
   }
 }
 
+function confirmPhotoPermission() {
+  if (document.getElementById("photoPermission").checked) return true;
+  showToast("Please confirm the photo privacy checkbox before uploading or submitting.");
+  document.getElementById("photoPermission").focus();
+  return false;
+}
+
 function processPhoto(letter, file) {
+  if(window.LifeLettersPhotoSaves?.busy(letter)){showToast('Please wait for this photo to finish saving.');return;}
+  if(privateAccessBlocked){setPhotoStatus(letter,'error','Open your private personalization form link to add photos.');return;}
+  if (!confirmPhotoPermission()) return;
   if (file.size > 10 * 1024 * 1024) {
+    window.LifeLettersPhotoSaves.fail(letter);
     setPhotoStatus(letter, "error", "File too large (max 10 MB)");
     return;
   }
 
-  const reader = new FileReader();
-  reader.onload = (e) => showPhotoPreview(letter, e.target.result);
-  reader.readAsDataURL(file);
-  uploadPhoto(letter, file);
+  const previewUrl=URL.createObjectURL(file);
+  showPhotoPreview(letter,previewUrl);
+  window.LifeLettersPhotoSaves.run(letter,()=>uploadPhoto(letter,file)).finally(()=>URL.revokeObjectURL(previewUrl));
 }
 
 function showPhotoPreview(letter, dataUrl) {
@@ -517,24 +569,33 @@ function showPhotoPreview(letter, dataUrl) {
 }
 
 function removePhoto(letter) {
+  if(window.LifeLettersPhotoSaves?.busy(letter)){showToast('Please wait for this photo to finish saving.');return;}
+  window.LifeLettersPhotoSaves?.clear(letter);
   document.getElementById(`placeholder-${letter}`).style.display = "flex";
   document.getElementById(`preview-wrap-${letter}`).style.display = "none";
   document.getElementById(`file-${letter}`).value = "";
   state[letter].photo = null;
   state[letter].photoUrl = null;
   state[letter].storagePath = null;
+  state[letter].photoWarning = '';
   setPhotoStatus(letter, "", "");
   updateSubmitButton();
 }
 
 async function uploadPhoto(letter, file) {
-  if (privateAccessBlocked) { setPhotoStatus(letter, "error", "Open your private survey link to add photos."); return; }
+  if (privateAccessBlocked) { setPhotoStatus(letter, "error", "Open your private personalization form link to add photos."); return; }
+  if (!confirmPhotoPermission()) return;
   setPhotoStatus(letter, "uploading", "Uploading...");
 
   const formData = new FormData();
   formData.append("photo", file);
 
   try {
+    if (surveySession?.active) {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveProgress();
+      await surveySession.flush();
+    }
     const endpoint = surveySession?.active ? `${surveySession.path}/photos/${letter}` : `/api/upload/${letter}?order=${encodeURIComponent(orderNumber || "unassigned")}`;
     const res = await fetch(endpoint, {
       method: "POST",
@@ -547,18 +608,30 @@ async function uploadPhoto(letter, file) {
     }
 
     const result = await res.json();
+    if(!result.storagePath || !result.url)throw Error('This photo could not be stored. Please keep this tab open and try again.');
     state[letter].photo = true;
     state[letter].photoUrl = result.url;
     state[letter].storagePath = result.storagePath;
+    state[letter].photoWarning=result.warning||'';
+    showPhotoPreview(letter,result.url);
 
     const sizeMB = (result.size / (1024 * 1024)).toFixed(1);
-    setPhotoStatus(letter, "success", `Uploaded (${sizeMB} MB)`);
+    setPhotoStatus(letter,'uploading','Saving photo…');
+    try{
+      await saveProgress();
+      setPhotoStatus(letter,result.warning?'warning':'success',result.warning||`Saved online (${sizeMB} MB)`);
+    }catch{setPhotoStatus(letter,'error','Photo uploaded. Save again before leaving this page.');}
+    return true;
   } catch (err) {
     console.error("Upload error:", err);
+    // A local thumbnail is not evidence that the file was uploaded.
+    if(state[letter].photoUrl)showPhotoPreview(letter,state[letter].photoUrl);
+    else {document.getElementById(`placeholder-${letter}`).style.display='flex';document.getElementById(`preview-wrap-${letter}`).style.display='none';}
     setPhotoStatus(letter, "error", err.message || "Upload failed");
+    return false;
+  }finally{
+    updateSubmitButton();
   }
-
-  updateSubmitButton();
 }
 
 function setPhotoStatus(letter, type, message) {
@@ -749,12 +822,17 @@ function updateSubmitButton() {
   // get auto-validated on submit, so an error there still stops the order.
   const blocked =
     privateAccessBlocked ||
+    window.LifeLettersPhotoSaves?.busy() ||
     (surveySession?.active && Object.values(state).some(s => !s.isDefault && !s.storagePath)) ||
     invalid.length > 0 ||
     validating.length > 0 ||
     empty.length > 0 ||
     !name ||
-    !email;
+    !email ||
+    !document.getElementById("childName").value.trim() ||
+    !selectedCardColor() ||
+    !window.LifeLettersChildPhoto.ready() ||
+    !document.getElementById("photoPermission").checked;
 
   document.getElementById("submitBtn").disabled = blocked;
   const previewSubmit = document.getElementById("previewSubmit");
@@ -779,6 +857,15 @@ function updateSubmitButton() {
   } else if (!name || !email) {
     hint.className = "submit-hint";
     hint.textContent = "Add your name and email above to submit.";
+  } else if (!document.getElementById("childName").value.trim() || !selectedCardColor()) {
+    hint.className = "submit-hint";
+    hint.textContent = "Add your child’s name and choose a card color above to submit.";
+  } else if (!document.getElementById("photoPermission").checked) {
+    hint.className = "submit-hint";
+    hint.textContent = "Confirm the photo privacy checkbox above to submit.";
+  } else if (!window.LifeLettersChildPhoto.ready()) {
+    hint.className = "submit-hint";
+    hint.textContent = "Upload your child's photo for the title card above, and wait for it to finish saving.";
   } else if (pending.length > 0) {
     hint.className = "submit-hint";
     hint.textContent = `Ready — we'll double-check ${pending.length} unverified word${pending.length > 1 ? "s" : ""} when you submit.`;
@@ -792,10 +879,26 @@ function updateSubmitButton() {
 }
 
 async function submitOrder() {
-  if (privateAccessBlocked) return;
+  if(submitInFlight)return;
+  submitInFlight=true;
+  try { await submitOrderOnce(); } finally { submitInFlight=false; }
+}
+
+async function submitOrderOnce() {
+  if(window.LifeLettersPhotoSaves?.busy()){showToast('Please wait for your photos to finish saving.');return;}
+  if (privateAccessBlocked || !confirmPhotoPermission()) return;
+  if(!window.LifeLettersChildPhoto.ready()){showToast("Please upload your child's title-card photo first.");document.getElementById("chooseChildPhoto").focus();return;}
   const customerName = document.getElementById("customerName").value.trim();
   const customerEmail = document.getElementById("customerEmail").value.trim();
   const letterStyle = "lower";
+  const childName = document.getElementById("childName").value;
+  const cardColor = selectedCardColor();
+  if (!childName.trim() || !cardColor) {
+    alert("Please enter your child’s name and choose a card color.");
+    document.getElementById(!childName.trim() ? "childName" : "cardColorOptions").scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!childName.trim()) document.getElementById("childName").focus();
+    return;
+  }
 
   // Validation
   if (!customerEmail) {
@@ -839,6 +942,8 @@ async function submitOrder() {
     return;
   }
 
+  if(!await confirmCardSubmission())return;
+
   // Build entries
   const entries = letters.map((letter) => ({
     letter,
@@ -872,6 +977,8 @@ async function submitOrder() {
         customerEmail,
         customerName,
         letterStyle,
+        childName,
+        cardColor,
         entries,
       }),
     });
@@ -891,6 +998,7 @@ async function submitOrder() {
     document.getElementById("confirmationSection").style.display = "block";
 
     // Hide the form sections
+    document.querySelector(".photo-privacy-card").style.display = "none";
     document.querySelector(".order-card").style.display = "none";
     document.querySelector(".photo-help-card").style.display = "none";
     document.querySelector(".letters-section").style.display = "none";
@@ -1005,6 +1113,11 @@ function saveProgress() {
     const data = {
       savedAt: new Date().toISOString(),
       orderNumber,
+      photoPermissionAccepted: document.getElementById("photoPermission").checked,
+      photoPermissionVersion: document.getElementById("photoPermission").dataset.permissionVersion,
+      childName: document.getElementById("childName").value,
+      childPhoto: window.LifeLettersChildPhoto.value(),
+      cardColor: selectedCardColor(),
       customerName: document.getElementById("customerName").value,
       customerEmail: document.getElementById("customerEmail").value,
       letterStyle: "lower",
@@ -1024,17 +1137,24 @@ function saveProgress() {
         isDefault: !!s.isDefault,
         photoUrl: s.photoUrl || null,
         storagePath: s.storagePath || null,
+        photoWarning:s.photoWarning||'',
         feedback: s.feedback || "",
       };
     }
-    if (!hasContent && !data.customerName && !data.customerEmail) {
+    if (!hasContent && !data.customerName && !data.customerEmail && !data.childName && !data.cardColor) {
       localStorage.removeItem(progressKey());
       if (!surveySession?.active) return;
     }
     try { localStorage.setItem(progressKey(), JSON.stringify(data)); } catch { /* Online saving still works when browser storage is full. */ }
-    if (surveySession?.active) surveySession.save(data).catch(() => {});
+    if (surveySession?.active) {
+      const saved=surveySession.save(data);
+      saved.catch(()=>{}); // Autosave errors are shown by the session notice.
+      return saved;
+    }
   } catch (err) {
     console.warn("Could not save progress:", err);
+    surveySession?.notice('Could not finish saving. Keep this tab open and try again.',true);
+    const failure=Promise.reject(err);failure.catch(()=>{});return failure;
   }
 }
 
@@ -1060,6 +1180,11 @@ function restoreProgress(cloudData = null) {
 
   restoring = true;
 
+  document.getElementById("photoPermission").checked = data.photoPermissionAccepted === true && data.photoPermissionVersion === document.getElementById("photoPermission").dataset.permissionVersion;
+  document.getElementById("childName").value = data.childName || "";
+  window.LifeLettersChildPhoto.restore(data.childPhoto);
+  document.querySelectorAll('input[name="cardColor"]').forEach(input => { input.checked = input.value === data.cardColor; });
+  updateCardColorSelection();
   if (data.customerName) document.getElementById("customerName").value = data.customerName;
   if (data.customerEmail) document.getElementById("customerEmail").value = data.customerEmail;
   if (data.orderNumber) orderNumber = data.orderNumber;
@@ -1100,7 +1225,8 @@ function restoreProgress(cloudData = null) {
       state[letter].photoUrl = saved.photoUrl;
       state[letter].storagePath = saved.storagePath || null;
       showPhotoPreview(letter, saved.photoUrl);
-      setPhotoStatus(letter, "success", "Saved photo");
+      state[letter].photoWarning=saved.photoWarning||'';
+      setPhotoStatus(letter,saved.photoWarning?'warning':'success',saved.photoWarning||'Saved photo');
     }
   }
 
@@ -1129,6 +1255,7 @@ function startOver() {
   if (surveySession?.active) {
     if (!confirm("Clear the words and photos in this set?")) return;
     for (const letter of Object.keys(state)) { clearLetterWord(letter); removePhoto(letter); }
+    window.LifeLettersChildPhoto.reset();
     saveProgress();
     return;
   }
@@ -1139,14 +1266,24 @@ function startOver() {
   window.location.reload();
 }
 
+let manualSaveRunning=false;
 async function handleManualSave() {
-  saveProgress();
-  if (surveySession?.active) {
-    try { await surveySession.flush(); showToast("Saved online. Use your private email link to continue on any device."); }
-    catch (error) { showToast(error.message); }
-    return;
-  }
-  showToast("Progress saved on this device — come back anytime to finish.");
+  if(privateAccessBlocked){showToast('Could not open your saved personalization form. Keep this tab open and reopen your private email link before saving.');return;}
+  if(manualSaveRunning)return;
+  manualSaveRunning=true;
+  const button=document.getElementById('saveBtn'),label=button.innerHTML;
+  button.disabled=true;button.textContent='Saving photos & answers…';
+  if(saveTimer)clearTimeout(saveTimer);
+  try{
+    const failed=await window.LifeLettersPhotoSaves.settle();
+    await saveProgress();
+    if(surveySession?.active){
+      await surveySession.flush();
+      if(failed.length){const message=`Your words and completed photos are saved. Please retry the photo upload for: ${failed.map(l=>l==='TITLE'?"child’s photo":l.toLowerCase()).join(', ')} before leaving.`;surveySession.notice(message,true);showToast(message);}
+      else showToast('All photos and answers are saved online. You can safely close this tab and reopen your private email link.');
+    }else showToast('Progress saved on this device — come back anytime to finish.');
+  }catch(error){showToast(error.message||'Could not finish saving. Keep this tab open and try again.');}
+  finally{button.disabled=false;button.innerHTML=label;manualSaveRunning=false;}
 }
 
 // ============================================
@@ -1181,33 +1318,19 @@ function previewImageHtml(letter) {
   return `<div class="pv-photo pv-photo-empty">${label}</div>`;
 }
 
-function openPreview() {
-  const grid = document.getElementById("previewGrid");
-  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-  grid.innerHTML = letters
-    .map((letter) => {
-      const s = state[letter];
-      const word = s.isDefault ? DEFAULT_CARDS[letter] || "" : s.word || "";
-      const badge = s.isDefault
-        ? '<span class="pv-tag default">Default</span>'
-        : s.status === "valid"
-          ? '<span class="pv-tag ok">✓</span>'
-          : s.status === "invalid" || s.status === "error"
-            ? '<span class="pv-tag bad">!</span>'
-            : word
-              ? '<span class="pv-tag pending">?</span>'
-              : '<span class="pv-tag empty">—</span>';
-      return `
-        <div class="pv-card">
-          <div class="pv-card-top">${letterDisplayHtml(letter)}${badge}</div>
-          ${previewImageHtml(letter)}
-        <div class="pv-word">${word ? escapeSurveyText(word) : "<em>empty</em>"}</div>
-        </div>`;
-    })
-    .join("");
-
+async function openPreview() {
   document.getElementById("previewOverlay").style.display = "flex";
   document.body.style.overflow = "hidden";
+  document.getElementById('previewClose').focus();
+  try{
+    const entries=[...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(letter=>{
+      const s=state[letter];
+      let photoUrl=s.isDefault?DEFAULT_IMAGES[letter]:s.photoUrl;
+      if(!photoUrl&&!s.isDefault){const preview=document.getElementById(`preview-${letter}`),wrap=document.getElementById(`preview-wrap-${letter}`);if(wrap?.style.display!=='none')photoUrl=preview?.getAttribute('src');}
+      return {letter,word:s.isDefault?DEFAULT_CARDS[letter]||'':s.word||'',photoUrl,isDefault:s.isDefault,status:s.status};
+    });
+    await window.LifeLettersCardPreview.render({color:selectedCardColor(),childName:document.getElementById('childName').value,childPhoto:window.LifeLettersChildPhoto.value(),entries});
+  }catch(error){document.getElementById('previewGrid').textContent=error.message||'The card preview could not load. Please try again.';}
 }
 
 function escapeSurveyText(value) {
@@ -1215,8 +1338,10 @@ function escapeSurveyText(value) {
 }
 
 function closePreview() {
+  window.LifeLettersCardPreview?.cancel();
   document.getElementById("previewOverlay").style.display = "none";
   document.body.style.overflow = "";
+  document.getElementById('previewBtn').focus();
 }
 
 // ============================================

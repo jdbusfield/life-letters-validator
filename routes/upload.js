@@ -6,7 +6,7 @@ import { checkUploadedPhoto } from "../lib/imageCheck.js";
 
 const router = Router();
 router.use("/api/upload/:letter", (_req, res, next) => {
-  if (process.env.REQUIRE_SURVEY_ACCESS === "true") return res.status(401).json({ error: "Open your private survey link to upload photos" });
+  if (process.env.REQUIRE_SURVEY_ACCESS === "true") return res.status(401).json({ error: "Open your private personalization form link to upload photos" });
   next();
 });
 
@@ -33,8 +33,7 @@ router.post("/api/upload/:letter", upload.single("photo"), async (req, res) => {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    // Quality gate: reject low-resolution photos (and, when enabled via
-    // PHOTO_REQUIRE_TRANSPARENT, photos without a transparent background).
+    // Low resolution is a warning; optional transparency rules still apply.
     const check = checkUploadedPhoto(req.file.buffer);
     if (!check.ok) {
       return res.status(422).json({ error: check.reason });
@@ -81,6 +80,7 @@ router.post("/api/upload/:letter", upload.single("photo"), async (req, res) => {
       url: publicUrl,
       storagePath,
       size: req.file.size,
+      warning: check.warning || null,
     });
   } catch (error) {
     console.error("Upload error:", error);

@@ -37,11 +37,62 @@
       </div>
     </section>
 
+    <!-- Order Info -->
+    <section class="order-card" id="orderCard">
+      <h2>Make this set theirs</h2>
+      <p id="surveyInfo" hidden></p>
+      <p id="surveySaveStatus" role="status" aria-live="polite"></p>
+      <div class="order-field child-name-field">
+        <label for="childName">Child’s Name <span class="required-note">(required)</span></label>
+        <p class="field-help" id="childNameHelp">What name would you like on the title card? We suggest using just their first name. We’ll print it exactly as entered.</p>
+        <input type="text" id="childName" maxlength="80" placeholder="Enter your child’s name" aria-describedby="childNameHelp" autocomplete="off" required>
+      </div>
+      <section class="child-photo-field" aria-labelledby="childPhotoHeading">
+        <h3 id="childPhotoHeading">Child’s Photo <span class="required-note">(required)</span></h3>
+        <p class="field-help" id="childPhotoHelp">Choose a clear photo of your child for the circular title card. Adjust the preview to frame their face. JPG or PNG, up to 10 MB.</p>
+        <p class="field-help">Your photos are used to create, print, and support your order. Personalization files in the personalization form are scheduled for deletion 90 days after your finished cards ship. <a href="#photoPrivacyHeading">Read the photo privacy notice</a>.</p>
+        <label class="photo-permission"><input type="checkbox" id="photoPermission" data-permission-version="2026-11-18-v1" required><span>I am an adult and have permission to provide this child’s information and use the photos I upload.</span></label>
+        <div class="child-photo-layout">
+          <div class="child-photo-circle"><img id="childPhotoPreview" alt="Child’s title-card photo preview" hidden><span id="childPhotoPlaceholder">Your child’s photo</span></div>
+          <div class="child-photo-controls">
+            <button class="btn btn-secondary" type="button" id="chooseChildPhoto">Upload Child’s Photo</button>
+            <input type="file" id="childPhotoFile" accept="image/jpeg,image/png" aria-describedby="childPhotoHelp" hidden>
+            <button class="btn btn-secondary" type="button" id="removeChildPhoto" hidden>Remove photo</button>
+            <div id="childPhotoPosition" hidden>
+              <label for="childPhotoX">Move photo left / right</label><input id="childPhotoX" type="range" min="0" max="100" value="50">
+              <label for="childPhotoY">Move photo up / down</label><input id="childPhotoY" type="range" min="0" max="100" value="50">
+            </div>
+            <p id="childPhotoStatus" role="status" aria-live="polite">Confirm the photo privacy checkbox above before uploading.</p>
+          </div>
+        </div>
+      </section>
+      <fieldset class="card-color-field" aria-describedby="cardColorHelp">
+        <legend>Choose Your Card Color <span class="required-note">(required)</span></legend>
+        <p class="field-help" id="cardColorHelp">Pick one color for this set. Buying more than one set? Each has its own personalization form and color choice.</p>
+        <div class="card-color-options" id="cardColorOptions"></div>
+        <p id="cardColorSelection" class="color-selection" role="status" aria-live="polite">Choose a color above.</p>
+      </fieldset>
+      <h3 class="contact-details-heading">Your details</h3>
+      <div class="order-fields">
+        <input type="hidden" id="surveySetLabel">
+        <div class="order-field">
+          <label for="customerName">Your Name</label>
+          <input type="text" id="customerName" placeholder="Enter your name" required>
+        </div>
+        <div class="order-field">
+          <label for="customerEmail">Your Email</label>
+          <input type="email" id="customerEmail" placeholder="Enter your email" required>
+        </div>
+      </div>
+    </section>
+
     <section class="photo-help-card">
       <h2>Ways to Find Your Photos</h2>
       <ul>
         <li><strong>Start with your camera roll.</strong> Find a person, pet, place, or object that matches your word.</li>
+        <li><strong>Search your smartphone’s photos.</strong> On your smartphone, you can search for words or locations to find photos from your life more easily!</li>
         <li><strong>Search for a picture.</strong> Try Google Images and take a screenshot of the picture you choose.</li>
+        <li><strong>Take the photos yourself.</strong> Have a photo shoot with your child holding the objects or doing the activity that matches the word.</li>
         <li><strong>Keep it simple.</strong> Choose “Use Default” for any letter to use our ready-to-go photo and word.</li>
       </ul>
       <p class="photo-help-note">Your progress saves automatically on this device. Work on the letters in any order and come back whenever you're ready!</p>
@@ -61,28 +112,15 @@
       </div>
     </section>
 
-    <!-- Order Info -->
-    <section class="order-card" id="orderCard">
-      <h2>Your Order</h2>
-      <p id="surveyInfo" hidden></p>
-      <p id="surveySaveStatus" role="status" aria-live="polite"></p>
-      <div class="order-fields">
-        <div class="order-field" id="surveySetField" hidden>
-          <label for="surveySetLabel">Name this set</label>
-          <input type="text" id="surveySetLabel" maxlength="120" placeholder="For example, Oliver’s cards">
-        </div>
-        <div class="order-field">
-          <label for="customerName">Your Name</label>
-          <input type="text" id="customerName" placeholder="Enter your name" required>
-        </div>
-        <div class="order-field">
-          <label for="customerEmail">Your Email</label>
-          <input type="email" id="customerEmail" placeholder="Enter your email" required>
-        </div>
-      </div>
-    </section>
-
     <!-- Letter Grid -->
+    <section class="photo-privacy-card" aria-labelledby="photoPrivacyHeading">
+      <h2 id="photoPrivacyHeading">Your photos stay private</h2>
+      <p>We use your photos and personalization details to create, print, and support your Life Letters order. They are shared only with our team and the service providers needed to fulfill it.</p>
+      <p>Your personalization files in the personalization form are scheduled for deletion <strong>90 days after your finished cards ship to you</strong>, unless they are still needed to resolve an order issue or meet a legal requirement.</p>
+      <p>We don’t use your photos in advertising or social media without separate permission. For questions or deletion requests, email <a href="mailto:contact@life-letters.com">contact@life-letters.com</a>.</p>
+      <details class="photo-privacy-details"><summary>Printing, working copies, and backups</summary><p>Printing requires sharing your personalized PDF with Canva. Our team separately checks removal of Canva uploads and downloaded working copies. Service-provider backups may remain for additional periods; this notice does not promise that every backup copy is erased on day 90.</p></details>
+      <p class="photo-permission-help">Confirm the upload permission beside Child’s Photo above before uploading or submitting your cards.</p>
+    </section>
     <section class="letters-section">
       <h2>Your Words &amp; Photos</h2>
       <p class="section-subtitle">All cards use lowercase letters. For each letter, enter a word and upload a corresponding photo. Or, click "Use Default." for our default word and image!</p>
@@ -135,7 +173,11 @@
         <h2>Preview your cards</h2>
         <button class="preview-close" id="previewClose" title="Close">&times;</button>
       </div>
-      <p class="preview-note" id="previewNote">This is a rough preview of the front of each card. Final printed cards are 4.25&Prime; &times; 5.5&Prime;.</p>
+      <p class="preview-note" id="previewNote">Loading your chosen card design…</p>
+      <div class="preview-side-controls" role="group" aria-label="Card side">
+        <button type="button" data-preview-side="front" aria-pressed="true">Fronts</button>
+        <button type="button" data-preview-side="back" aria-pressed="false">Backs</button>
+      </div>
       <div class="preview-grid" id="previewGrid"></div>
       <div class="preview-actions">
         <button class="btn btn-secondary" id="previewKeepEditing">Keep editing</button>
@@ -147,11 +189,22 @@
   </div>
 
   <!-- Toast -->
+  <dialog id="submitConfirmation" class="submit-confirmation" aria-labelledby="submitConfirmationTitle" aria-describedby="submitConfirmationDescription">
+    <h2 id="submitConfirmationTitle">Ready to submit your Life Letters cards?</h2>
+    <p id="submitConfirmationDescription">Please double-check your child’s name, color, words, and photos. Once submitted, you won’t be able to edit this set yourself.</p>
+    <form method="dialog" class="submit-confirmation-actions">
+      <button class="btn btn-secondary" value="cancel" autofocus>Keep Editing</button>
+      <button class="btn btn-primary" value="submit">Yes, Submit My Cards</button>
+    </form>
+  </dialog>
   <div class="toast" id="toast" style="display:none;"></div>
 
   <audio id="letterSoundAudio" preload="none"></audio>
   <script src="survey-session.js"></script>
+  <script src="photo-saves.js"></script>
+  <script src="child-photo.js"></script>
   <script src="app.js"></script>
   <script type="module" src="letter-audio.js"></script>
+  <script type="module" src="card-preview.js"></script>
 </body>
 </html>

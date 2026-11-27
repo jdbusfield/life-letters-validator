@@ -15,6 +15,7 @@ import {
 } from "../lib/letterData.js";
 import { validateSingle, validateBatch } from "../lib/validation.js";
 import { generateOrderPDF } from "../lib/pdfGenerator.js";
+import { CARD_COLORS, cardPersonalization } from "../lib/cardPersonalization.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -54,6 +55,7 @@ router.get("/api/letter-data", (_req, res) => {
     letterTips: LETTER_TIPS,
     phonicsVersion: PHONICS_VERSION,
     defaultImages: getDefaultImageMap(),
+    cardColors: CARD_COLORS,
   });
 });
 
@@ -99,7 +101,7 @@ router.post("/api/validate-batch", async (req, res) => {
 
 // POST /api/submit-order — submit completed form to Supabase
 router.post("/api/submit-order", async (req, res) => {
-  if (process.env.REQUIRE_SURVEY_ACCESS === "true") return res.status(401).json({ error: "Please submit through your private survey link" });
+  if (process.env.REQUIRE_SURVEY_ACCESS === "true") return res.status(401).json({ error: "Please submit through your private personalization form link" });
   try {
     if (!supabase) {
       return res.status(503).json({ error: "Database not configured" });
@@ -113,6 +115,8 @@ router.post("/api/submit-order", async (req, res) => {
         .status(400)
         .json({ error: "Email is required" });
     }
+
+    const { childName, cardColor } = cardPersonalization(req.body, true);
 
     const finalOrderNumber =
       (orderNumber && orderNumber.trim()) ||
@@ -131,6 +135,8 @@ router.post("/api/submit-order", async (req, res) => {
         order_number: finalOrderNumber,
         customer_email: customerEmail,
         customer_name: customerName || null,
+        child_name: childName,
+        card_color: cardColor,
         letter_style: "lower",
         status: "submitted",
       })
@@ -182,13 +188,13 @@ router.post("/api/submit-order", async (req, res) => {
     });
   } catch (error) {
     console.error("Submit order error:", error);
-    res.status(500).json({ error: "Failed to submit order" });
+    res.status(error.status || 500).json({ error: error.status ? error.message : "Failed to submit order" });
   }
 });
 
 // GET /api/order-status/:orderNumber — check order status
 router.get("/api/order-status/:orderNumber", async (req, res) => {
-  if (process.env.REQUIRE_SURVEY_ACCESS === "true" && !req.session?.isAdmin) return res.status(401).json({ error: "Open your private survey link to see its status" });
+  if (process.env.REQUIRE_SURVEY_ACCESS === "true" && !req.session?.isAdmin) return res.status(401).json({ error: "Open your private personalization form link to see its status" });
   try {
     if (!supabase) {
       return res.status(503).json({ error: "Database not configured" });
